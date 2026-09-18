@@ -189,6 +189,7 @@ Radar / Passport Detail 读模型(只从持久化数据派生,无第二套状态
 - **EvidenceBundle 不是 PassportDims**:observation 携带机器可读 `findings`(枚举,维度归属强制),provenance(source/detail/url/at)逐条保留进维度 evidence;collector 对不属于自己的 finding 直接抛错。
 - **证据成熟度**:`maturity ∈ {FIXTURE, SIMULATED, PUBLIC-SOURCE, ONCHAIN}`。当前全部 FIXTURE —— 只能宣称 `PASSPORT PIPELINE = PASS-FIXTURE`,不得宣称真实审计能力。
 - **持久化防伪**:写前 `ProjectPassportSchema.parse()`、读后 `ProjectPassportSchema.parse()`(含派生锁)——数据库手改 / JSON 手改 / 部分写入都表现为 READ FAIL,而非静默接受;record id 白名单 `[a-z0-9][a-z0-9_-]{0,63}` 阻断 path traversal。
+- **引用完整性锁(P0-2R)**:`Candidate.project_id = EvidenceBundle.project_id = Passport.project_id = Store Key = Filename ID` 五重一致。`generateFromBundle` 要求 candidate 已在 canonical store 入库且与持久化记录完全一致(未入库 / 漂移副本 → FAIL CLOSED);Store 读取时校验文件名 id 与记录自身 id 一致("aurora 文件名 + nimbus 载荷"、"改名的合法记录文件"均拒绝)。Demo 里"这个 Passport 属于这个项目"是系统契约保证,不是 UI 观感。
 - **Discovery 边界**:仅实现 `FixtureDiscoverySource`;X API / GitHub API / Solana RPC / AI Agent 全部 HOLD,未来作为 `DiscoverySource` 接口的同形替换。
 
 ## 10. 预留边界(P0 不实现,但契约已留位)

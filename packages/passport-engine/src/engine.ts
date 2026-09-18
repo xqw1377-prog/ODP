@@ -20,6 +20,22 @@ export interface PassportEngineOptions {
   dataDir: string;
 }
 
+/** Structural equality over parsed JSON values (object key order ignored). */
+function jsonDeepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((v, i) => jsonDeepEqual(v, b[i]));
+  }
+  const ka = Object.keys(a).sort();
+  const kb = Object.keys(b).sort();
+  if (ka.length !== kb.length || ka.some((k, i) => k !== kb[i])) return false;
+  const ra = a as Record<string, unknown>;
+  const rb = b as Record<string, unknown>;
+  return ka.every((k) => jsonDeepEqual(ra[k], rb[k]));
+}
+
 export class PassportEngine {
   readonly candidates: ValidatedJsonStore<ProjectCandidate>;
   readonly passports: ValidatedJsonStore<ProjectPassport>;
@@ -49,9 +65,31 @@ export class PassportEngine {
     return source.discover().map((c) => this.ingestCandidate(c));
   }
 
-  /** candidate + raw evidence → derived passport, validated, persisted. */
+  /**
+   * candidate + raw evidence → derived passport, validated, persisted.
+   *
+   * Referential integrity lock (P0-2R): the candidate MUST already exist in
+   * the canonical candidate store and be byte-identical to the persisted
+   * record. An un-ingested candidate or a drifted copy FAILS CLOSED — the
+   * passport is only ever generated for the canonical project record.
+   * (generatePassport separately enforces bundle.project_id ===
+   * candidate.project_id, and the store enforces passport.project_id ===
+   * store key === filename id.)
+   */
   generateFromBundle(candidate: ProjectCandidate, bundle: EvidenceBundle): ProjectPassport {
-    const passport = generatePassport(candidate, bundle);
+    const passed = ProjectCandidateSchema.parse(candidate);
+    const persisted = this.candidates.get(passed.project_id);
+    if (persisted === null) {
+      throw new Error(
+        `candidate ${passed.project_id} is not ingested in the canonical store — ingest before generating a passport`,
+      );
+    }
+    if (!jsonDeepEqual(persisted, passed)) {
+      throw new Error(
+        `candidate drift: passed candidate for ${passed.project_id} differs from the persisted canonical record`,
+      );
+    }
+    const passport = generatePassport(passed, bundle);
     this.passports.save(passport);
     return passport;
   }

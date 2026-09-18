@@ -176,10 +176,90 @@ describe("radar + detail read models", () => {
     assert.equal(engine.getProjectPassport("prj_unknown"), null);
   });
 
-  it("persisted passport without candidate record → radar fails loudly", () => {
+  it("persisted record with mismatched payload id → radar fails loudly (identity binding)", () => {
     const file = engine.candidates.filePath("prj_phantomx");
     const raw = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
     writeFileSync(file, JSON.stringify({ ...raw, project_id: "prj_orphaned" }), "utf8");
-    assert.throws(() => engine.radar(), /no candidate record/);
+    assert.throws(() => engine.radar(), /identity binding|no candidate record/);
+  });
+});
+
+// ── Referential integrity lock (P0-2R) ─────────────────────────────────
+
+describe("referential integrity lock (P0-2R)", () => {
+  function auroraCase() {
+    const { engine, candidates, bundles } = seededEngine();
+    for (const c of candidates) {
+      engine.generateFromBundle(c, bundleFor(bundles, c.project_id));
+    }
+    const aurora = candidates.find((c) => c.project_id === "prj_aurora_net")!;
+    const bundle = bundleFor(bundles, "prj_aurora_net");
+    return { engine, aurora, bundle, bundles, candidates };
+  }
+
+  it("un-ingested candidate → generateFromBundle FAILS CLOSED", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "odp-passport-engine-"));
+    const engine = new PassportEngine({ dataDir: dir });
+    const candidates = new FixtureDiscoverySource(DISCOVERY_DIR).discover();
+    const bundles = loadEvidenceBundles(EVIDENCE_DIR);
+    const aurora = candidates.find((c) => c.project_id === "prj_aurora_net")!;
+    assert.throws(
+      () => engine.generateFromBundle(aurora, bundleFor(bundles, "prj_aurora_net")),
+      /not ingested/,
+    );
+    assert.equal(engine.passports.get("prj_aurora_net"), null); // nothing persisted
+  });
+
+  it("candidate drift (mutated copy) → generateFromBundle FAILS CLOSED", () => {
+    const { engine, aurora, bundle } = auroraCase();
+    const drifted = { ...aurora, symbol: "DRIFT" };
+    assert.throws(() => engine.generateFromBundle(drifted, bundle), /drift/);
+    const driftedSite = { ...aurora, website: "https://evil.example" };
+    assert.throws(() => engine.generateFromBundle(driftedSite, bundle), /drift/);
+  });
+
+  it("canonical candidate (read back from store) → PASS, ALLOW", () => {
+    const { engine, aurora, bundle } = auroraCase();
+    const canonical = engine.candidates.get("prj_aurora_net")!;
+    const passport = engine.generateFromBundle(canonical, bundle);
+    assert.equal(passport.status, "ALLOW");
+    assert.deepEqual(engine.passports.get("prj_aurora_net"), passport);
+  });
+
+  it("aurora filename + nimbus payload → read FAILS CLOSED (both stores)", () => {
+    const { engine } = auroraCase();
+    const nimbusPassportFile = engine.passports.filePath("prj_nimbus_dex");
+    const nimbusPayload = readFileSync(nimbusPassportFile, "utf8");
+    writeFileSync(engine.passports.filePath("prj_aurora_net"), nimbusPayload, "utf8");
+    assert.throws(() => engine.passports.get("prj_aurora_net"), /identity binding/);
+
+    const nimbusCandidateFile = engine.candidates.filePath("prj_nimbus_dex");
+    const nimbusCandidatePayload = readFileSync(nimbusCandidateFile, "utf8");
+    writeFileSync(engine.candidates.filePath("prj_aurora_net"), nimbusCandidatePayload, "utf8");
+    assert.throws(() => engine.candidates.get("prj_aurora_net"), /identity binding/);
+  });
+
+  it("renamed valid passport file → list/get FAILS CLOSED", () => {
+    const { engine } = auroraCase();
+    const auroraPayload = readFileSync(engine.passports.filePath("prj_aurora_net"), "utf8");
+    // The payload is a fully valid ALLOW passport — but the filename lies.
+    writeFileSync(path.join(path.dirname(engine.passports.filePath("prj_aurora_net")), "prj_renamed.json"), auroraPayload, "utf8");
+    assert.throws(() => engine.passports.list(), /identity binding/);
+    assert.throws(() => engine.passports.get("prj_renamed"), /identity binding/);
+  });
+
+  it("golden three remain ALLOW / WATCH / REJECT through the engine", () => {
+    const { engine, candidates, bundles } = auroraCase();
+    const statuses = Object.fromEntries(
+      candidates.map((c) => {
+        const p = engine.generateFromBundle(c, bundleFor(bundles, c.project_id));
+        return [c.project_id, p.status];
+      }),
+    );
+    assert.deepEqual(statuses, {
+      prj_aurora_net: "ALLOW",
+      prj_nimbus_dex: "WATCH",
+      prj_phantomx: "REJECT",
+    });
   });
 });

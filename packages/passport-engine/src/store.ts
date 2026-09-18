@@ -25,6 +25,9 @@ export function assertSafeId(id: string): void {
  *     so a partially-written or non-canonical record can never exist.
  *   - get()/list(): schema.parse AFTER reading — a hand-edited or otherwise
  *     forged file (e.g. inconsistent ruling) fails loudly, never silently.
+ *   - Identity binding (P0-2R): the store key (filename id) must equal the
+ *     record's own id. "aurora filename + nimbus payload" and "renamed
+ *     valid record file" both FAIL CLOSED.
  */
 export class ValidatedJsonStore<T> {
   constructor(
@@ -36,6 +39,16 @@ export class ValidatedJsonStore<T> {
   private fileOf(id: string): string {
     assertSafeId(id);
     return path.join(this.dir, `${id}.json`);
+  }
+
+  /** The record stored under `expectedId` must claim exactly that id. */
+  private assertBinding(expectedId: string, record: T): void {
+    const actualId = this.idOf(record);
+    if (actualId !== expectedId) {
+      throw new Error(
+        `store identity binding violated: file for ${JSON.stringify(expectedId)} contains record ${JSON.stringify(actualId)}`,
+      );
+    }
   }
 
   save(record: T): void {
@@ -51,7 +64,9 @@ export class ValidatedJsonStore<T> {
   get(id: string): T | null {
     const file = this.fileOf(id);
     if (!existsSync(file)) return null;
-    return this.schema.parse(JSON.parse(readFileSync(file, "utf8")));
+    const parsed = this.schema.parse(JSON.parse(readFileSync(file, "utf8")));
+    this.assertBinding(id, parsed);
+    return parsed;
   }
 
   /** File path for a stored record (test/inspection hook). */
@@ -61,10 +76,13 @@ export class ValidatedJsonStore<T> {
 
   list(): T[] {
     if (!existsSync(this.dir)) return [];
-    return readdirSync(this.dir)
-      .filter((f) => f.endsWith(".json") && !f.startsWith("."))
-      .sort()
-      .map((f) => this.schema.parse(JSON.parse(readFileSync(path.join(this.dir, f), "utf8"))))
-      .sort((a, b) => (this.idOf(a) < this.idOf(b) ? -1 : this.idOf(a) > this.idOf(b) ? 1 : 0));
+    const out: T[] = [];
+    for (const f of readdirSync(this.dir).filter((x) => x.endsWith(".json") && !x.startsWith(".")).sort()) {
+      const stem = f.slice(0, -".json".length);
+      const parsed = this.schema.parse(JSON.parse(readFileSync(path.join(this.dir, f), "utf8")));
+      this.assertBinding(stem, parsed);
+      out.push(parsed);
+    }
+    return out.sort((a, b) => (this.idOf(a) < this.idOf(b) ? -1 : this.idOf(a) > this.idOf(b) ? 1 : 0));
   }
 }

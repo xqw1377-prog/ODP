@@ -53,7 +53,7 @@ ODP/
 |---|---|---|
 | G0 Repo Baseline | repo / README / architecture / env example / build / test | PASS-LOCAL |
 | G1 Domain Contract | 7 个冻结 schema(strict)+ 派生裁决锁 + 状态一致性 + schema tests | PASS-LOCAL(P0-1R/R2 修订后) |
-| G2 Passport Golden Fixture | candidate+evidence → 独立生成 → 三态复现 + 持久化 + 读模型 | PASS-LOCAL(PASSPORT PIPELINE = PASS-FIXTURE) |
+| G2 Passport Golden Fixture | candidate+evidence → 独立生成 → 三态复现 + 持久化 + 读模型 + 引用完整性锁 | PASS-LOCAL(PASSPORT PIPELINE = PASS-FIXTURE;P0-2R 修订后) |
 | G3 Matching | 确定性 MatchResult + 解释 | NOT-STARTED |
 | G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |
 | G5 End-to-End | Radar → Claim Confirmed 全链路 | NOT-STARTED |
