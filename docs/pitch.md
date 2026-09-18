@@ -19,7 +19,7 @@ and [docs/devnet-evidence-dst_aurora_devnet_003.md](devnet-evidence-dst_aurora_d
 > Platforms profit from the mismatch. We remove it.
 
 **On screen:** Radar page — hero + three evidence rows.
-Point at the two muted cards first:
+Point at the Nimbus and PhantomX evidence rows first:
 
 > ODP doesn't distribute everything. Most discovery stops at "what's trending".
 > We stop at "what's true".
