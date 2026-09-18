@@ -18,7 +18,7 @@ and [docs/devnet-evidence-dst_aurora_devnet_003.md](devnet-evidence-dst_aurora_d
 > Real users drown in noise — bots, paid hype, sybils.
 > Platforms profit from the mismatch. We remove it.
 
-**On screen:** Radar page — three project cards.
+**On screen:** Radar page — hero + three evidence rows.
 Point at the two muted cards first:
 
 > ODP doesn't distribute everything. Most discovery stops at "what's trending".
@@ -75,7 +75,7 @@ Point at the on-chain card:
 
 ## 1:30–2:10 — The Live Claim (click **Open Maya's view** → `/claim/maya`)
 
-> This is Maya's phone. She didn't hunt for an airdrop. Aurora found HER.
+> This is Maya's view. She didn't hunt for an airdrop. Aurora found HER.
 
 Point at the why-you list:
 
@@ -90,13 +90,13 @@ Do not talk over the wait — let the audience feel the confirmation.
 
 ---
 
-## 2:10–2:40 — Proof (the page flips itself to **Claimed on Solana ✓**)
+## 2:10–2:40 — Proof (the page flips itself to **Ownership delivered. · VERIFIED ON SOLANA**)
 
 > Confirmed. Five thousand tokens, on Devnet, in Maya's wallet.
 > A ClaimReceipt exists on-chain. Try to claim twice? The program itself
 > rejects it — not the UI, the smart contract.
 
-Scroll to Protocol Protection:
+Point at the PROOF panel:
 
 > Proof verified, wrong wallet rejected, wrong amount rejected,
 > sybils excluded, double claims rejected — all of this happened in our
