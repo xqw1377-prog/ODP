@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ISOString } from "./util.js";
+import { derivePassportRuling } from "./passport-policy.js";
 
 // ── Passport-level status ──────────────────────────────────────────────
 
@@ -104,11 +105,14 @@ export type StatusEvent = z.infer<typeof StatusEventSchema>;
 
 /**
  * Six-dimension, evidence-based, continuously audited project record.
- * Frozen contract (strict, explainable-by-construction):
+ * Frozen contract (strict, explainable-by-construction, derivation-locked):
  *   - `reasons` is never empty.
  *   - `status_history` starts at DISCOVERED, ends at the current status,
  *     and every link is contiguous (history[i].from === history[i-1].to).
- * The overall status must always be derivable from `dims` — see rules.ts.
+ *   - **Derivation lock (P0-1R2)**: `status` and `reasons` must equal
+ *     `derivePassportRuling(dims)` exactly (canonical order included).
+ *     A forged ruling cannot exist as a passport — not via API, admin,
+ *     database edit or JSON import. Status is derived, never declared.
  */
 export const ProjectPassportSchema = z
   .object({
@@ -136,6 +140,21 @@ export const ProjectPassportSchema = z
       if (cur.from !== prev.to) {
         issue(`status_history chain broken at index ${i}: from ${cur.from} but previous ends at ${prev.to}`);
       }
+    }
+
+    const derived = derivePassportRuling(p.dims);
+    if (derived.status !== p.status) {
+      issue(
+        `status ${p.status} contradicts the evidence: dims derive ${derived.status} (${derived.reasons.join("; ")})`,
+      );
+    }
+    const reasonsCanonical =
+      derived.reasons.length === p.reasons.length &&
+      derived.reasons.every((r, i) => r === p.reasons[i]);
+    if (!reasonsCanonical) {
+      issue(
+        `reasons are not the canonical derived ruling: expected [${derived.reasons.join("; ")}], got [${p.reasons.join("; ")}]`,
+      );
     }
   });
 export type ProjectPassport = z.infer<typeof ProjectPassportSchema>;

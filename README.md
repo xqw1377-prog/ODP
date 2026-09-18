@@ -45,7 +45,7 @@ ODP/
 | Gate | 范围 | 状态 |
 |---|---|---|
 | G0 Repo Baseline | repo / README / architecture / env example / build / test | PASS-LOCAL |
-| G1 Domain Contract | 7 个冻结 schema(strict)+ 状态一致性 + schema tests | PASS-LOCAL(P0-1R 修订后) |
+| G1 Domain Contract | 7 个冻结 schema(strict)+ 派生裁决锁 + 状态一致性 + schema tests | PASS-LOCAL(P0-1R/R2 修订后) |
 | G2 Passport Golden Fixture | ALLOW / WATCH / REJECT 三 fixture | IMPLEMENTED-OFFLINE(fixture 骨架已入库,规则引擎复现在 P0-2) |
 | G3 Matching | 确定性 MatchResult + 解释 | NOT-STARTED |
 | G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |

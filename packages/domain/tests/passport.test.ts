@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import * as domain from "../src/index.js";
 import {
   ProjectPassportSchema,
-  aggregatePassportStatus,
+  derivePassportRuling,
   buildPassport,
   reassessPassport,
 } from "../src/index.js";
@@ -25,18 +25,18 @@ function dimsOf(fixture: string): PassportDims {
 
 // ── G2 skeleton: rule aggregation reproduces the golden fixtures ───────
 
-describe("passport aggregation (deterministic, explainable)", () => {
+describe("passport ruling derivation (deterministic, explainable)", () => {
   for (const { fixture, expected } of CASES) {
-    it(`${fixture} fixture aggregates to ${expected}`, () => {
-      const ruling = aggregatePassportStatus(passportOf(fixture).dims);
+    it(`${fixture} fixture derives ${expected}`, () => {
+      const ruling = derivePassportRuling(passportOf(fixture).dims);
       assert.equal(ruling.status, expected);
       assert.ok(ruling.reasons.length > 0, "ruling must be explainable");
     });
   }
 
-  it("aggregation is deterministic (same dims → same result)", () => {
+  it("derivation is deterministic (same dims → same result)", () => {
     const dims = dimsOf("nimbus");
-    assert.deepEqual(aggregatePassportStatus(dims), aggregatePassportStatus(dims));
+    assert.deepEqual(derivePassportRuling(dims), derivePassportRuling(dims));
   });
 
   it("buildPassport from phantomx dims reproduces the REJECT passport", () => {
@@ -53,7 +53,7 @@ describe("ALLOW requires evidence (R2)", () => {
   it("baseline-satisfying dims with one empty-evidence dim → WATCH + NO_EVIDENCE reason", () => {
     const dims = dimsOf("aurora");
     dims.SOCIAL.evidence = [];
-    const ruling = aggregatePassportStatus(dims);
+    const ruling = derivePassportRuling(dims);
     assert.equal(ruling.status, "WATCH");
     assert.ok(ruling.reasons.some((r) => r.startsWith("NO_EVIDENCE: SOCIAL")), ruling.reasons.join("; "));
   });
@@ -62,10 +62,42 @@ describe("ALLOW requires evidence (R2)", () => {
     const dims = dimsOf("aurora");
     dims.TEAM.evidence = [];
     dims.TOKEN.evidence = [];
-    const ruling = aggregatePassportStatus(dims);
+    const ruling = derivePassportRuling(dims);
     assert.equal(ruling.status, "WATCH");
     assert.ok(ruling.reasons.some((r) => r === "NO_EVIDENCE: TEAM"));
     assert.ok(ruling.reasons.some((r) => r === "NO_EVIDENCE: TOKEN"));
+  });
+});
+
+// ── P0-1R2: derivation lock — forged rulings cannot parse ─────────────
+
+describe("derivation lock (P0-1R2)", () => {
+  it("forged status on healthy dims rejected (even with consistent history)", () => {
+    const bad = passportOf("aurora"); // derives ALLOW
+    bad.status = "REJECT";
+    bad.reasons = ["I don't like this project"];
+    bad.status_history = [
+      { from: "DISCOVERED", to: "REJECT", reason: "initial ruling", at: "2026-09-10T09:30:00Z" },
+    ];
+    assert.throws(() => ProjectPassportSchema.parse(bad), /contradicts the evidence/);
+  });
+
+  it("forged reasons rejected even when status matches the derived one", () => {
+    const bad = passportOf("nimbus"); // derives WATCH with canonical reasons
+    bad.reasons = ["paid partner approved"];
+    assert.throws(() => ProjectPassportSchema.parse(bad), /canonical derived ruling/);
+  });
+
+  it("correct reasons in non-canonical order rejected", () => {
+    const bad = passportOf("phantomx");
+    bad.reasons = [...bad.reasons].reverse();
+    assert.throws(() => ProjectPassportSchema.parse(bad), /canonical derived ruling/);
+  });
+
+  it("golden fixtures still parse with their canonical rulings", () => {
+    for (const { fixture } of CASES) {
+      ProjectPassportSchema.parse(loadJson(`../fixtures/passports/${fixture}.passport.json`));
+    }
   });
 });
 
@@ -121,7 +153,7 @@ describe("reassessPassport — status is derived, never dictated (R3)", () => {
 
   it("a caller cannot smuggle a status in: healthy dims never produce REJECT", () => {
     const next = reassessPassport(passportOf("phantomx"), dimsOf("aurora"), "x", "2026-09-20T01:00:00Z");
-    assert.equal(next.status, aggregatePassportStatus(next.dims).status);
+    assert.equal(next.status, derivePassportRuling(next.dims).status);
     assert.equal(next.status, "ALLOW");
   });
 

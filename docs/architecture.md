@@ -68,7 +68,9 @@
 | ONCHAIN | HEALTHY · WATCH · ABNORMAL · MALICIOUS |
 | SOCIAL | ORGANIC · MIXED · BOT_HEAVY · FAKE |
 
-### 4.2 聚合规则(确定性,按序短路)
+### 4.2 聚合规则:derivePassportRuling(单一事实源)
+
+裁决逻辑只存在于 `passport-policy.ts` 的 `derivePassportRuling(dims)`,由 `ProjectPassportSchema`(superRefine)、`buildPassport`、`reassessPassport` 三方共同调用,规则不允许有任何副本。规则(确定性,按序短路):
 
 ```text
 1. FATAL  → REJECT   TEAM=MALICIOUS ∣ TOKEN=MALICIOUS ∣ ONCHAIN=MALICIOUS ∣ SOCIAL=FAKE
@@ -91,11 +93,18 @@
 
 **协议宪法级约束:状态必须由证据产生,不能由调用者指定。**
 
-不存在 `transitionPassport(passport, status)` 这类直接改总状态的 API。唯一的改判入口是:
+**Derivation Lock(P0-1R2)**:`ProjectPassportSchema` 在 schema 层强制
+
+```text
+passport.status  === derivePassportRuling(passport.dims).status
+passport.reasons === derivePassportRuling(passport.dims).reasons   // 逐项 + 顺序
+```
+
+因此伪造裁决的 Passport 对象在领域契约层不存在——不能花钱改、不能管理员改、不能 API 调用者改、不能数据库手写改、不能 JSON 导入改。不存在 `transitionPassport(passport, status)` 这类直接改总状态的 API。唯一的改判入口是:
 
 ```text
 reassessPassport(previous, nextDims, reason, at)
-  → nextStatus = aggregatePassportStatus(nextDims)   // 强制重新聚合
+  → nextStatus = derivePassportRuling(nextDims)   // 强制重新聚合
   → dims / status / reasons / status_history / updated_at 一次性更新
 ```
 

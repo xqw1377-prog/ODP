@@ -1,6 +1,7 @@
 export * from "./util.js";
 export * from "./project.js";
 export * from "./passport.js";
+export * from "./passport-policy.js";
 export * from "./rules.js";
 export * from "./human.js";
 export * from "./match.js";
