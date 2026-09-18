@@ -299,12 +299,28 @@ const claimIx = (
     proof,
   ).ix;
 
-const send = async (label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<string> =>
-  sendAndConfirmTransaction(connection, new Transaction({ feePayer: signers[0]!.publicKey }).add(ix), signers).then((sig) => {
-    console.log(`    tx: ${EXPLORER(sig)}`);
-    EVIDENCE.transactions[label] = { signature: sig, explorer: EXPLORER(sig) };
-    return sig;
-  });
+// Explicit fresh blockhash per attempt + retry: the public devnet RPC is
+// load-balanced and web3's cached latest blockhash can hit "Blockhash not
+// found" on another backend after the negative-evidence polling pauses.
+const send = async (label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<string> => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const tx = new Transaction({ feePayer: signers[0]!.publicKey, blockhash, lastValidBlockHeight }).add(ix);
+      const sig = await sendAndConfirmTransaction(connection, tx, signers);
+      console.log(`    tx: ${EXPLORER(sig)}`);
+      EVIDENCE.transactions[label] = { signature: sig, explorer: EXPLORER(sig) };
+      return sig;
+    } catch (err) {
+      if (attempt < 5 && /Blockhash not found/i.test(String(err))) {
+        console.log(`    (retry ${attempt}: transient devnet blockhash skew)`);
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      throw err;
+    }
+  }
+};
 
 /** Offsets within DistributionAccount data (8-byte anchor disc + fixed fields). */
 const OFF = { total: 8 + 32 * 7, recipients: 8 + 32 * 7 + 8, claimed: 8 + 32 * 7 + 8 + 4, status: 8 + 32 * 7 + 8 + 4 + 8 } as const;
