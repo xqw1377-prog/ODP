@@ -27,6 +27,17 @@ import {
 } from "@odp/passport-engine";
 import { loadHumanProfiles, loadMatchIntent, matchProject } from "@odp/matching-engine";
 import { buildAllocations, buildManifest, manifestHash } from "../src/index.js";
+import {
+  DISTRIBUTOR_PROGRAM_ID as PROGRAM_ID,
+  distributionPda as deriveDistributionPda,
+  initializeDistributionIx,
+  fundDistributionIx,
+  commitRootIx,
+  openClaimsIx,
+  claimIx as buildClaimIx,
+  assembleSigned,
+} from "../src/instructions.js";
+import type { DistributionAddresses } from "../src/instructions.js";
 
 /**
  * P0-4 §21 local-validator matrix: the full on-chain Golden Path against a
@@ -39,7 +50,6 @@ import { buildAllocations, buildManifest, manifestHash } from "../src/index.js";
  *   2. npm run localnet   (in packages/distribution-engine)
  */
 
-const PROGRAM_ID = new PublicKey("GRgiEJUGZxYzoQp7jJSvt4hZvv1AvojoC7Fgz2HyyFeW");
 const RPC = process.env.ODP_LOCALNET_RPC ?? "http://127.0.0.1:8899";
 /** Devnet evidence runs override this (ODP_DISTRIBUTION_ID=dst_aurora_devnet_001) to avoid PDA collisions. */
 const DISTRIBUTION_ID = process.env.ODP_DISTRIBUTION_ID ?? "dst_aurora_demo_001";
@@ -85,18 +95,6 @@ function loadKeypair(name: string): Keypair {
 }
 
 const sha256 = (data: Buffer | string): Buffer => createHash("sha256").update(data).digest();
-const ixDiscriminator = (name: string): Buffer => sha256(`global:${name}`).subarray(0, 8);
-const u64le = (n: bigint): Buffer => {
-  const b = Buffer.alloc(8);
-  b.writeBigUInt64LE(n);
-  return b;
-};
-const u32le = (n: number): Buffer => {
-  const b = Buffer.alloc(4);
-  b.writeUInt32LE(n);
-  return b;
-};
-const borshString = (s: string): Buffer => Buffer.concat([u32le(s.length), Buffer.from(s, "utf8")]);
 
 let pass = 0;
 let fail = 0;
@@ -125,8 +123,8 @@ async function expectTxFailure(label: string, run: () => Promise<unknown>): Prom
  */
 async function expectFailureEvidenced(label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<void> {
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  const tx = new Transaction({ blockhash, lastValidBlockHeight }).add(ix);
-  tx.sign(...signers);
+  // fee payer = first required signer, set explicitly (P0-4B-R1 signer lock)
+  const tx = assembleSigned(ix, signers, blockhash, lastValidBlockHeight);
   const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true });
 
   let info: Awaited<ReturnType<typeof connection.getTransaction>> = null;
@@ -262,104 +260,47 @@ const manifest = buildManifest({
 const manifestHashHex = manifestHash(manifest);
 console.log(`off-chain: ${allocations.map((a) => `${a.human_id}:${a.amount}`).join(" ")} root=${rootHex}`);
 
-// ── on-chain PDAs ──────────────────────────────────────────────────────
-const distIdHash = sha256(DISTRIBUTION_ID);
-const projectIdHash = sha256(PROJECT_ID);
-const [distributionPda] = PublicKey.findProgramAddressSync(
-  [Buffer.from("distribution"), project.publicKey.toBuffer(), distIdHash],
-  PROGRAM_ID,
-);
+// ── on-chain PDAs + shared instruction builders ─────────────────────────
+const distributionPda = deriveDistributionPda({
+  authority: project.publicKey,
+  distributionId: DISTRIBUTION_ID,
+  programId: PROGRAM_ID,
+});
 const vault = getAssociatedTokenAddressSync(MINT, distributionPda, true);
 
-// ── instruction builders (raw anchor encoding, struct-order accounts) ──
+const ADDR: DistributionAddresses = {
+  programId: PROGRAM_ID,
+  authority: project.publicKey,
+  mint: MINT,
+  distributionPda,
+  vault,
+  authorityToken: projectAta,
+  distributionId: DISTRIBUTION_ID,
+  projectId: PROJECT_ID,
+  total: TOTAL,
+};
 
-function initializeIx(): TransactionInstruction {
-  return new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-      { pubkey: project.publicKey, isSigner: true, isWritable: true },
-      { pubkey: MINT, isSigner: false, isWritable: false },
-      { pubkey: distributionPda, isSigner: false, isWritable: true },
-      { pubkey: vault, isSigner: false, isWritable: true },
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    ],
-    data: Buffer.concat([ixDiscriminator("initialize_distribution"), distIdHash, projectIdHash, u64le(TOTAL)]),
-  });
-}
-
-function fundIx(): TransactionInstruction {
-  return new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-      { pubkey: project.publicKey, isSigner: true, isWritable: true },
-      { pubkey: distributionPda, isSigner: false, isWritable: true },
-      { pubkey: projectAta, isSigner: false, isWritable: true },
-      { pubkey: vault, isSigner: false, isWritable: true },
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    ],
-    data: ixDiscriminator("fund_distribution"),
-  });
-}
-
-function commitIx(root: Buffer, manifestHashBytes: Buffer, recipients: number): TransactionInstruction {
-  return new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-      { pubkey: project.publicKey, isSigner: true, isWritable: true },
-      { pubkey: distributionPda, isSigner: false, isWritable: true },
-    ],
-    data: Buffer.concat([ixDiscriminator("commit_root"), root, manifestHashBytes, u32le(recipients)]),
-  });
-}
-
-function openIx(): TransactionInstruction {
-  return new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-      { pubkey: project.publicKey, isSigner: true, isWritable: true },
-      { pubkey: distributionPda, isSigner: false, isWritable: true },
-      { pubkey: vault, isSigner: false, isWritable: false },
-    ],
-    data: ixDiscriminator("open_claims"),
-  });
-}
-
-function claimIx(
+// signers[0] is the fee payer for every tx below (see src/instructions.ts)
+const claimIx = (
   claimant: Keypair,
   claimantAta: PublicKey,
   distributionId: string,
   amount: bigint,
   proof: Buffer[],
-): TransactionInstruction {
-  const [receiptPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("claim"), distributionPda.toBuffer(), claimant.publicKey.toBuffer()],
-    PROGRAM_ID,
-  );
-  return new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-      { pubkey: claimant.publicKey, isSigner: true, isWritable: true },
-      { pubkey: distributionPda, isSigner: false, isWritable: true },
-      { pubkey: vault, isSigner: false, isWritable: true },
-      { pubkey: claimantAta, isSigner: false, isWritable: true },
-      { pubkey: receiptPda, isSigner: false, isWritable: true },
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    ],
-    data: Buffer.concat([
-      ixDiscriminator("claim"),
-      borshString(distributionId),
-      u64le(amount),
-      u32le(proof.length),
-      Buffer.concat(proof),
-    ]),
-  });
-}
+): TransactionInstruction =>
+  buildClaimIx(
+    { programId: PROGRAM_ID },
+    claimant.publicKey,
+    claimantAta,
+    distributionPda,
+    vault,
+    distributionId,
+    amount,
+    proof,
+  ).ix;
 
 const send = async (label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<string> =>
-  sendAndConfirmTransaction(connection, new Transaction().add(ix), signers).then((sig) => {
+  sendAndConfirmTransaction(connection, new Transaction({ feePayer: signers[0]!.publicKey }).add(ix), signers).then((sig) => {
     console.log(`    tx: ${EXPLORER(sig)}`);
     EVIDENCE.transactions[label] = { signature: sig, explorer: EXPLORER(sig) };
     return sig;
@@ -383,14 +324,14 @@ const danProof = merkleProof(tree, leaves[1]!).map((b) => Buffer.from(b));
 // ── the §21 matrix ─────────────────────────────────────────────────────
 
 console.log("1. initialize");
-await send("initialize_distribution", initializeIx(), [project]);
+await send("initialize_distribution", initializeDistributionIx(ADDR), [project]);
 {
   const s = await distributionState();
   ok("initialize PASS (PENDING, total recorded)", s.status === 0 && s.total === TOTAL);
 }
 
 console.log("2. fund exact amount");
-await send("fund_distribution", fundIx(), [project]);
+await send("fund_distribution", fundDistributionIx(ADDR), [project]);
 {
   const vaultBalance = (await connection.getTokenAccountBalance(vault)).value.amount;
   const s = await distributionState();
@@ -398,10 +339,10 @@ await send("fund_distribution", fundIx(), [project]);
 }
 
 console.log("3. claim before commit/open → FAIL (evidenced on-chain)");
-await expectFailureEvidenced("claim_before_live_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya, project]);
+await expectFailureEvidenced("claim_before_live_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]);
 
 console.log("4. commit root");
-await send("commit_root", commitIx(tree.root, Buffer.from(manifestHashHex, "hex"), allocations.length), [project]);
+await send("commit_root", commitRootIx(ADDR, tree.root, Buffer.from(manifestHashHex, "hex"), allocations.length), [project]);
 {
   const s = await distributionState();
   ok("root commit PASS (COMMITTED)", s.status === 2);
@@ -410,23 +351,23 @@ await send("commit_root", commitIx(tree.root, Buffer.from(manifestHashHex, "hex"
 console.log("5. root mutation after commit → FAIL (evidenced on-chain)");
 await expectFailureEvidenced(
   "root_mutation_REJECTED",
-  commitIx(sha256("evil-root"), Buffer.alloc(32, 1), 2),
+  commitRootIx(ADDR, sha256("evil-root"), Buffer.alloc(32, 1), 2),
   [project],
 );
 
 console.log("6. open claims");
-await send("open_claims", openIx(), [project]);
+await send("open_claims", openClaimsIx(ADDR), [project]);
 {
   const s = await distributionState();
   ok("open claims PASS (LIVE)", s.status === 3);
 }
 
 console.log("7. negative claim cases (evidenced on-chain)");
-await expectFailureEvidenced("wrong_amount_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 4999n, mayaProof), [maya, project]);
+await expectFailureEvidenced("wrong_amount_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 4999n, mayaProof), [maya]);
 const tamperedProof = mayaProof.map((b, i) => (i === 0 ? Buffer.alloc(32, 0xab) : b));
-await expectFailureEvidenced("wrong_proof_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, tamperedProof), [maya, project]);
-await expectFailureEvidenced("sib_no_allocation_REJECTED", claimIx(sib, sibAta, DISTRIBUTION_ID, 5000n, danProof), [sib, project]);
-await expectFailureEvidenced("cross_distribution_REJECTED", claimIx(maya, mayaAta, "dst_other_999", 5000n, mayaProof), [maya, project]);
+await expectFailureEvidenced("wrong_proof_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, tamperedProof), [maya]);
+await expectFailureEvidenced("sib_no_allocation_REJECTED", claimIx(sib, sibAta, DISTRIBUTION_ID, 5000n, danProof), [sib]);
+await expectFailureEvidenced("cross_distribution_REJECTED", claimIx(maya, mayaAta, "dst_other_999", 5000n, mayaProof), [maya]);
 
 console.log("8. Maya claim PASS");
 await send("maya_claim", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]);
@@ -437,7 +378,7 @@ await send("maya_claim", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProo
 }
 
 console.log("9. Maya second claim → FAIL (evidenced on-chain, program-level double-claim rejection)");
-await expectFailureEvidenced("maya_second_claim_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya, project]);
+await expectFailureEvidenced("maya_second_claim_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]);
 
 console.log("10. Dan claim PASS");
 await send("dan_claim", claimIx(dan, danAta, DISTRIBUTION_ID, 5000n, danProof), [dan]);
