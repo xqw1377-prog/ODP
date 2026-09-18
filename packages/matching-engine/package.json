@@ -1,0 +1,25 @@
+{
+  "name": "@odp/matching-engine",
+  "version": "0.1.0",
+  "description": "ODP Human Matching Engine: deterministic, explainable Project × Human matching behind the ALLOW trust gate",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "demo": "tsx scripts/demo-matching.ts",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@odp/domain": "*",
+    "@odp/passport-engine": "*",
+    "zod": "^4.0.0"
+  }
+}

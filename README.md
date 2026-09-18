@@ -42,7 +42,12 @@ ODP/
 │       ├── fixtures/      # discovery/(候选) evidence/(原始证据) expected/(golden 输出,仅比对用)
 │       ├── scripts/       # regen-golden(从原始输入重生成 golden,幂等)
 │       └── tests/         # G2 golden path、证据边界、重裁决、持久化与读模型测试
-└── (后续)packages/web · packages/api · programs/distributor   # P0-3 之后逐步进入
+│   └── matching-engine/    # [P0-3] Project × Human 确定性匹配:ALLOW 硬门 + 四因子打分 + Risk 阻断 + 可解释 reasons
+│       ├── src/            # intent 契约 / humans 装载 / matcher
+│       ├── fixtures/       # intents/(项目匹配意图) humans/(复用三个 Human fixture)
+│       ├── scripts/        # demo-matching(打印 G3 固定演示排名)
+│       └── tests/
+└── (后续)packages/web · packages/api · programs/distributor   # P0-4 之后逐步进入
 ```
 
 ## P0 门禁状态
@@ -54,7 +59,7 @@ ODP/
 | G0 Repo Baseline | repo / README / architecture / env example / build / test | PASS-LOCAL |
 | G1 Domain Contract | 7 个冻结 schema(strict)+ 派生裁决锁 + 状态一致性 + schema tests | PASS-LOCAL(P0-1R/R2 修订后) |
 | G2 Passport Golden Fixture | candidate+evidence → 独立生成 → 三态复现 + 持久化 + 读模型 + 引用完整性锁 | PASS-LOCAL(PASSPORT PIPELINE = PASS-FIXTURE;P0-2R 修订后) |
-| G3 Matching | 确定性 MatchResult + 解释 | NOT-STARTED |
+| G3 Matching | 确定性 MatchResult + 解释(ALLOW 硬门 / Risk 阻断 / 四因子公式) | PASS-LOCAL(MATCHING PIPELINE = PASS-FIXTURE) |
 | G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |
 | G5 End-to-End | Radar → Claim Confirmed 全链路 | NOT-STARTED |
 

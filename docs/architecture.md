@@ -35,7 +35,8 @@
 | 模块 | 位置 | 阶段 | 说明 |
 |---|---|---|---|
 | Domain Contract | `packages/domain` | P0-1(已验收) | 7 个冻结 schema + 状态机 + Merkle 分配格式,纯函数零 IO |
-| Passport Engine | `packages/passport-engine` | **P0-2(本轮)** | Trust Pipeline:发现输入 → 证据组装 → 派生裁决 → 校验持久化 → Radar/Detail 读模型。证据成熟度 = FIXTURE |
+| Passport Engine | `packages/passport-engine` | P0-2(已验收) | Trust Pipeline:发现输入 → 证据组装 → 派生裁决 → 校验持久化 → Radar/Detail 读模型。证据成熟度 = FIXTURE |
+| Matching Engine | `packages/matching-engine` | **P0-3(本轮)** | Project × Human 确定性匹配:ALLOW 硬门 + 四因子公式 + Risk 阻断 + Why-you-were-selected reasons。PASS-FIXTURE |
 | Matching 引擎 | `packages/api`(待建) | P0-3 | 确定性打分 + match_reasons |
 | Solana Distributor | `programs/distributor`(Anchor,待建) | P0-4 | vault / root / claim / 防重复 claim |
 | Web(4 页面) | `packages/web`(待建) | P0-2~P0-6 | Radar / Passport / Distribution / Claim |
@@ -159,6 +160,7 @@ COMMITTED ──CLAIMS_OPENED──▶ LIVE ──CLOSED──▶ CLOSED
 | 重裁决(G2) | ALLOW→REJECT 带 history;不变证据不追加 history;REJECT→ALLOW 恢复 | `passport-engine/tests/pipeline.test.ts` |
 | 持久化(G2) | 原子写 round-trip;伪造持久化文件读取失败;未知字段读取失败;path traversal 拒绝 | `passport-engine/tests/engine.test.ts` |
 | 读模型(G2) | Radar 三态+过滤、reasons 来自持久化 passport;Detail 六维+provenance;孤儿 passport 报错 | `passport-engine/tests/engine.test.ts` |
+| 匹配(G3) | ALLOW 硬门(WATCH/REJECT DENIED);三 Human 分层 + reasons;确定性(分数/reasons/排名);tie→human_id;Risk 无法翻盘;身份绑定;公式无粉丝因子 | `matching-engine/tests/matcher.test.ts` |
 
 链上层(double claim、vault balance conservation)在 P0-4 以 Solana 测试覆盖,此处不冒充。
 
@@ -192,7 +194,36 @@ Radar / Passport Detail 读模型(只从持久化数据派生,无第二套状态
 - **引用完整性锁(P0-2R)**:`Candidate.project_id = EvidenceBundle.project_id = Passport.project_id = Store Key = Filename ID` 五重一致。`generateFromBundle` 要求 candidate 已在 canonical store 入库且与持久化记录完全一致(未入库 / 漂移副本 → FAIL CLOSED);Store 读取时校验文件名 id 与记录自身 id 一致("aurora 文件名 + nimbus 载荷"、"改名的合法记录文件"均拒绝)。Demo 里"这个 Passport 属于这个项目"是系统契约保证,不是 UI 观感。
 - **Discovery 边界**:仅实现 `FixtureDiscoverySource`;X API / GitHub API / Solana RPC / AI Agent 全部 HOLD,未来作为 `DiscoverySource` 接口的同形替换。
 
-## 10. 预留边界(P0 不实现,但契约已留位)
+## 10. Matching Engine(P0-3,PASS-FIXTURE)
+
+```text
+ALLOW Passport(硬门:WATCH/REJECT → MATCH DENIED)
++
+ProjectMatchIntent { project_id, target_tags[] }   ← 项目当下想找什么早期用户,非付费定向
++
+HumanProfile[]
+↓
+matchProject() 确定性打分
+↓
+ranked MatchResult[](tie → human_id ASC)
+```
+
+固定公式(不含粉丝数、财富、Token 余额、项目付费):
+
+```text
+match_score = 0.55 × interestFit + 0.20 × human_confidence
+            + 0.15 × reputation     + 0.10 × network_score
+interestFit = |human.interest_tags ∩ intent.target_tags| / |target_tags|
+```
+
+规则:
+
+- **Risk 阻断**:任一已声明风险旗标(SYBIL/BOT/FARMING/MANIPULATION/FAKE_ENGAGEMENT/WALLET_CLUSTER)→ score 恒为 0,reasons 逐项列出 `blocked: <FLAG> risk`;其它分数无法翻盘。
+- **可解释**:每个 MatchResult 的 match_reasons ≥ 1,按 canonical 顺序给出 interest fit / human confidence / reputation / network 档位描述;分数本身永远不是解释。
+- **确定性**:同输入 → 同分数、同 reasons、同排名;并列按 human_id ASC;无随机。
+- **身份绑定**:MatchIntent.project_id = Passport.project_id = MatchResult.project_id,MatchResult.human_id = HumanProfile.human_id,不一致 FAIL CLOSED。
+
+## 11. 预留边界(P0 不实现,但契约已留位)
 
 - `ODP_HUMAN_SOURCE=fixture | x_oauth`:Human 身份来源开关,真实 X OAuth 是后续阶段的同形替换。
 - `discovery_sources[]` 字段按未来自动 Discovery 设计,P0 用 seed/半自动/fixture 填充。
