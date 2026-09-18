@@ -134,7 +134,7 @@ COMMITTED ──CLAIMS_OPENED──▶ LIVE ──CLOSED──▶ CLOSED
 
 ## 6. Merkle 分配格式
 
-**MERKLE-WIRE-FORMAT = PROVISIONAL(非 FROZEN)。** 在 TypeScript 与 Rust/Solana 实现就以下跨语言 test vector 完全一致(leaf bytes / leaf hash / tree root / proof / verification result)之前,不得宣称冻结;此项必须在 P0-4 / G4 前完成。当前保留 SHA-256——在没有链上实测 CU 数据之前不更换哈希算法。
+**MERKLE-WIRE-FORMAT = FROZEN-V1**(2026-09-18)。冻结依据:TypeScript 与 Rust(零依赖、手写 SHA-256)就固定测试向量产出完全一致的 leaf bytes / leaf hash / tree root / proof / 验证结果——向量含两个真实 Solana Pubkey 叶子与三个负例(错钱包/错金额/跨分发),入库于 `programs/merkle-vector/`(`vector.json` + 生成的 `vector_data.rs`),由 `packages/distribution-engine/scripts/gen-merkle-vector.ts` 从原始输入幂等生成,链上程序的同款辅助函数另由 `programs/distributor/tests/golden_path.rs` 对照向量断言。哈希保持 SHA-256(有跨语言向量与链上 CU 实测前不更换)。
 
 - **叶子**:`sha256(UTF8(distribution_id + "\n" + wallet + "\n" + amount))`。amount 使用 canonical 字符串,不含小数点与 leading zeros。distribution_id 进叶子以阻止跨分发重放 proof。
 - **建树**:叶子先按 `Buffer.compare` 排序(输入顺序不影响 root),两两哈希;**节点哈希对两个子哈希先排序再拼接**(`sha256(sort(a,b))`),因此验证无需方向位;奇数个节点时末节点原样上提。
@@ -223,7 +223,30 @@ interestFit = |human.interest_tags ∩ intent.target_tags| / |target_tags|
 - **确定性**:同输入 → 同分数、同 reasons、同排名;并列按 human_id ASC;无随机。
 - **身份绑定**:MatchIntent.project_id = Passport.project_id = MatchResult.project_id,MatchResult.human_id = HumanProfile.human_id,不一致 FAIL CLOSED。
 
-## 11. 预留边界(P0 不实现,但契约已留位)
+## 11. Solana Distributor(P0-4)
+
+链上程序 `programs/distributor`(Anchor 1.2,程序 ID `GRgiEJUGZxYzoQp7jJSvt4hZvv1AvojoC7Fgz2HyyFeW`),五个指令,状态机与 §5 完全同构:
+
+```text
+initialize_distribution  → PENDING(创建 Distribution PDA + PDA 持有的 vault ATA)
+fund_distribution        → FUNDED(精确转入 total_amount,转账额=状态额,拒绝 under-fund)
+commit_root              → COMMITTED(仅 FUNDED 可达 ⇒ root 一次性提交且不可变更)
+open_claims              → LIVE(再次校验 vault ≥ total)
+claim                    → 转出 + ClaimReceipt PDA(第二次 claim 在程序层 init 失败)
+```
+
+关键约束:
+
+- **PDA**:distribution = `PDA("distribution", project_authority, sha256(distribution_id))`;claim receipt = `PDA("claim", distribution, claimant)`。链上另存 `sha256(project_id)` 与 `manifest_hash`,把这一次分发钉死在"正是这份 Passport + MatchIntent + Allocation 快照"上。
+- **链上 merkle 验证**:claim 时程序用 `sha256(UTF8(distribution_id + "\n" + base58(claimant) + "\n" + amount))` 重算叶子并对照已提交 root 验证 proof(FROZEN-V1,含 base58 编码器);错钱包/错金额/错 proof/跨分发在程序层全部拒绝。
+- **双领拒绝**:不依赖前端,ClaimReceipt PDA 存在即第二次 `init` 失败。
+- **守恒**:`claimed_amount` checked_add 且 ≤ total;Golden Path 上 vault + claimed = funded。
+- **无 admin sweep**:程序不存在任何绕过 claim 责任的管理员提款路径;退款/到期处理 P0 HOLD。
+- **测试**:`programs/distributor/tests/golden_path.rs` 以 solana-program-test(进程内验证器)执行 §21 全矩阵;`packages/distribution-engine/scripts/localnet-e2e.ts` 为对等 TS 客户端(可指向本地 validator 或 devnet)。
+
+
+
+## 12. 预留边界(P0 不实现,但契约已留位)
 
 - `ODP_HUMAN_SOURCE=fixture | x_oauth`:Human 身份来源开关,真实 X OAuth 是后续阶段的同形替换。
 - `discovery_sources[]` 字段按未来自动 Discovery 设计,P0 用 seed/半自动/fixture 填充。

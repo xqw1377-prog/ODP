@@ -1,0 +1,55 @@
+{
+  "algorithm": "sha256; leaf = sha256(utf8(dist_id + '\\n' + wallet + '\\n' + amount)); leaves sorted; sibling-sorted pairing; odd promoted",
+  "distribution_id": "dst_aurora_demo_001",
+  "root_hex": "dfd862a213b7f88c2558721dbb9d23ec1e72b1a5a1326fdd8e5fe1d39c878a3e",
+  "entries": [
+    {
+      "wallet": "BGu7XoF86KA4hTJDoVFb4izKa23MZxsyrecJ9r4FNSS9",
+      "amount": "5000",
+      "leaf_preimage_utf8": "dst_aurora_demo_001\nBGu7XoF86KA4hTJDoVFb4izKa23MZxsyrecJ9r4FNSS9\n5000",
+      "leaf_hash_hex": "9e5d3cb1236882a288e9852ef08859b21a6fcf8cfdf492cbd492bb52ffcba754",
+      "proof_hex": [
+        "972b6352c076e6d3d6395ac1084a9fdd04795f697881c540d425e29006df2f47"
+      ]
+    },
+    {
+      "wallet": "2GAcVyic6XNUrgWMjh1CwDg8zfbYx9RVz5HWbABb7nhr",
+      "amount": "5000",
+      "leaf_preimage_utf8": "dst_aurora_demo_001\n2GAcVyic6XNUrgWMjh1CwDg8zfbYx9RVz5HWbABb7nhr\n5000",
+      "leaf_hash_hex": "972b6352c076e6d3d6395ac1084a9fdd04795f697881c540d425e29006df2f47",
+      "proof_hex": [
+        "9e5d3cb1236882a288e9852ef08859b21a6fcf8cfdf492cbd492bb52ffcba754"
+      ]
+    }
+  ],
+  "negatives": [
+    {
+      "case": "wrong_wallet",
+      "distribution_id": "dst_aurora_demo_001",
+      "wallet": "HtDM65Fbfg5c7EMp7noMUUpRWUYX6CoUyVYG8rNvNsMv",
+      "amount": "5000",
+      "expected_leaf_hash_hex": "14db9c842f78e0d91978cb1d82cdd207e586101e44efc221148532755257dd42",
+      "verify": false
+    },
+    {
+      "case": "wrong_amount",
+      "distribution_id": "dst_aurora_demo_001",
+      "wallet": "BGu7XoF86KA4hTJDoVFb4izKa23MZxsyrecJ9r4FNSS9",
+      "amount": "4999",
+      "expected_leaf_hash_hex": "fe183227a828b24673d7b10776c1a02a85bbde2f6a772ef2f05c9d031dcff2c6",
+      "verify": false
+    },
+    {
+      "case": "cross_distribution",
+      "distribution_id": "dst_other_999",
+      "wallet": "BGu7XoF86KA4hTJDoVFb4izKa23MZxsyrecJ9r4FNSS9",
+      "amount": "5000",
+      "expected_leaf_hash_hex": "b93dbdbbc085cd70933ce183f24e6c0f620c7280c99a1ca1cad2b9d1ddde92af",
+      "verify": false
+    }
+  ],
+  "positive_verify": [
+    true,
+    true
+  ]
+}

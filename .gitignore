@@ -7,6 +7,12 @@ coverage/
 .env
 .env.local
 data/
+.odp/
+.odp-tools/
+
+# rust / solana build artifacts
+target/
+*.so
 
 # os
 .DS_Store

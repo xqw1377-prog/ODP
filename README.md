@@ -42,12 +42,20 @@ ODP/
 │       ├── fixtures/      # discovery/(候选) evidence/(原始证据) expected/(golden 输出,仅比对用)
 │       ├── scripts/       # regen-golden(从原始输入重生成 golden,幂等)
 │       └── tests/         # G2 golden path、证据边界、重裁决、持久化与读模型测试
-│   └── matching-engine/    # [P0-3] Project × Human 确定性匹配:ALLOW 硬门 + 四因子打分 + Risk 阻断 + 可解释 reasons
-│       ├── src/            # intent 契约 / humans 装载 / matcher
-│       ├── fixtures/       # intents/(项目匹配意图) humans/(复用三个 Human fixture)
-│       ├── scripts/        # demo-matching(打印 G3 固定演示排名)
+│   ├── matching-engine/    # [P0-3] Project × Human 确定性匹配:ALLOW 硬门 + 四因子打分 + Risk 阻断 + 可解释 reasons
+│   │   ├── src/            # intent 契约 / humans 装载 / matcher
+│   │   ├── fixtures/       # intents/(项目匹配意图) humans/(三个 Human fixture,真 devnet pubkey)
+│   │   ├── scripts/        # demo-matching(打印 G3 固定演示排名)
+│   │   └── tests/
+│   └── distribution-engine/ # [P0-4] 链下分配策略(top-N 等额)+ canonical manifest + Merkle 向量 + Solana 客户端脚本
+│       ├── src/            # base58 / policy / manifest
+│       ├── fixtures/       # keys/(devnet pubkey 清单,无私钥)
+│       ├── scripts/        # gen-demo-keys / gen-merkle-vector / localnet-e2e(可指向 devnet)
 │       └── tests/
-└── (后续)packages/web · packages/api · programs/distributor   # P0-4 之后逐步进入
+├── programs/
+│   ├── merkle-vector/      # [P0-4] TS↔Rust 跨语言 test vector(零依赖 Rust,CI 强制)——MERKLE-WIRE-FORMAT = FROZEN-V1
+│   └── distributor/        # [P0-4] Anchor 程序:vault / root / claim / 防双领;§21 矩阵跑真实 SBF 产物
+└── (后续)packages/web · packages/api   # P0-5 之后逐步进入
 ```
 
 ## P0 门禁状态
@@ -60,7 +68,7 @@ ODP/
 | G1 Domain Contract | 7 个冻结 schema(strict)+ 派生裁决锁 + 状态一致性 + schema tests | PASS-LOCAL(P0-1R/R2 修订后) |
 | G2 Passport Golden Fixture | candidate+evidence → 独立生成 → 三态复现 + 持久化 + 读模型 + 引用完整性锁 | PASS-LOCAL(PASSPORT PIPELINE = PASS-FIXTURE;P0-2R 修订后) |
 | G3 Matching | 确定性 MatchResult + 解释(ALLOW 硬门 / Risk 阻断 / 四因子公式) | PASS-LOCAL(MATCHING PIPELINE = PASS-FIXTURE) |
-| G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |
+| G4 Solana Distribution | Merkle FROZEN-V1 + Anchor 程序 + §21 矩阵(真实 SBF 产物) | **PASS-LOCAL**(P0-4A);Devnet = HOLD-DEVNET(faucet 限流) |
 | G5 End-to-End | Radar → Claim Confirmed 全链路 | NOT-STARTED |
 
 ## P0 明确不做

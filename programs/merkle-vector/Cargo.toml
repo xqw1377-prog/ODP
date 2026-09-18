@@ -1,0 +1,9 @@
+[package]
+name = "merkle_vector"
+version = "0.1.0"
+edition = "2021"
+description = "ODP merkle wire-format cross-language (TS <-> Rust) test vector checker. Zero dependencies."
+
+[[bin]]
+name = "merkle_vector"
+path = "src/main.rs"

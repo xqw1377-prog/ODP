@@ -17,3 +17,5 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
+      - name: Merkle wire-format cross-language vector (TS = Rust)
+        run: cargo run --quiet --manifest-path programs/merkle-vector/Cargo.toml

@@ -1,0 +1,30 @@
+{
+  "name": "@odp/distribution-engine",
+  "version": "0.1.0",
+  "description": "ODP Distribution Engine: off-chain allocation policy, canonical manifest, Merkle vector, Solana client wiring",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "gen:keys": "tsx scripts/gen-demo-keys.ts",
+    "gen:vector": "tsx scripts/gen-merkle-vector.ts",
+    "localnet": "tsx scripts/localnet-e2e.ts",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@odp/domain": "*",
+    "@odp/matching-engine": "*",
+    "@odp/passport-engine": "*",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "zod": "^4.0.0"
+  }
+}
