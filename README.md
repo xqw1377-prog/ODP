@@ -34,7 +34,7 @@ npm test            # 运行所有测试
 
 环境要求:Node ≥ 20(开发环境为 v24)。复制 `.env.example` 为 `.env` 后按需修改;P0 阶段链上只使用 devnet。
 
-CI:GitHub Actions(Node 20)在每次 push / PR 上执行 `npm ci → typecheck → build → test`([ci.yml](.github/workflows/ci.yml))。**PASS-LOCAL 与 CI GREEN 分开记录。**
+CI:GitHub Actions(Node 20)在每次 push / PR 上执行 `npm ci → build → typecheck → test`([ci.yml](.github/workflows/ci.yml))。**PASS-LOCAL 与 CI GREEN 分开记录。**
 
 ## 仓库结构
 
