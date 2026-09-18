@@ -1,0 +1,12 @@
+{
+  "project_id": "prj_nimbus_dex",
+  "name": "Nimbus Router",
+  "symbol": "NMB",
+  "website": "https://nimbusrouter.example",
+  "x_account": "@nimbusrouter",
+  "github": null,
+  "chain": "solana",
+  "token_address": "NMBt0kEnAddr3ssExampleX7qVNE9dJm1LkzPwR4TgHb",
+  "discovered_at": "2026-09-11T14:00:00Z",
+  "discovery_sources": ["social", "capital"]
+}

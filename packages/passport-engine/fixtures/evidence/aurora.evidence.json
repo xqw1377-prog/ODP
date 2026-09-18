@@ -1,0 +1,61 @@
+{
+  "project_id": "prj_aurora_net",
+  "collected_at": "2026-09-10T09:30:00Z",
+  "maturity": "FIXTURE",
+  "observations": {
+    "TEAM": [
+      {
+        "source": "public-registry",
+        "detail": "Founders doxxed; two previously shipped Solana programs with clean exit history",
+        "url": "https://auroranet.example/team",
+        "at": "2026-09-10T09:00:00Z",
+        "findings": ["FOUNDERS_PUBLIC", "PRIOR_SHIPPED"]
+      }
+    ],
+    "PRODUCT": [
+      {
+        "source": "onchain",
+        "detail": "Mainnet beta live with 3,100 weekly active devices reporting telemetry",
+        "url": null,
+        "at": "2026-09-10T09:05:00Z",
+        "findings": ["LIVE_MAINNET"]
+      }
+    ],
+    "CODE": [
+      {
+        "source": "github",
+        "detail": "140 commits in last 90 days, 9 contributors, weekly releases",
+        "url": "https://github.com/auroranet-example",
+        "at": "2026-09-10T09:10:00Z",
+        "findings": ["ACTIVE_DEVELOPMENT"]
+      }
+    ],
+    "TOKEN": [
+      {
+        "source": "onchain",
+        "detail": "Mint and freeze authority revoked; LP locked 24 months; no transfer tax",
+        "url": null,
+        "at": "2026-09-10T09:15:00Z",
+        "findings": ["MINT_AUTHORITY_REVOKED", "FREEZE_AUTHORITY_REVOKED", "LP_LOCKED", "NO_TRANSFER_TAX"]
+      }
+    ],
+    "ONCHAIN": [
+      {
+        "source": "onchain",
+        "detail": "Treasury movements match announced multisig schedule; no insider concentration",
+        "url": null,
+        "at": "2026-09-10T09:20:00Z",
+        "findings": ["TREASURY_MATCHES_SCHEDULE", "NO_ABNORMAL_FLOWS"]
+      }
+    ],
+    "SOCIAL": [
+      {
+        "source": "social-analysis",
+        "detail": "Follower growth curve organic; bot ratio under 4%; no paid-promotion markers",
+        "url": null,
+        "at": "2026-09-10T09:25:00Z",
+        "findings": ["ORGANIC_GROWTH", "LOW_BOT_RATIO"]
+      }
+    ]
+  }
+}

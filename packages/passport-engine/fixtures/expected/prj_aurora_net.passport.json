@@ -1,0 +1,102 @@
+{
+  "project_id": "prj_aurora_net",
+  "dims": {
+    "TEAM": {
+      "status": "VERIFIED",
+      "evidence": [
+        {
+          "source": "public-registry",
+          "detail": "Founders doxxed; two previously shipped Solana programs with clean exit history",
+          "url": "https://auroranet.example/team",
+          "at": "2026-09-10T09:00:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    },
+    "PRODUCT": {
+      "status": "LIVE",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Mainnet beta live with 3,100 weekly active devices reporting telemetry",
+          "url": null,
+          "at": "2026-09-10T09:05:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    },
+    "CODE": {
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "source": "github",
+          "detail": "140 commits in last 90 days, 9 contributors, weekly releases",
+          "url": "https://github.com/auroranet-example",
+          "at": "2026-09-10T09:10:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    },
+    "TOKEN": {
+      "status": "HEALTHY",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Mint and freeze authority revoked; LP locked 24 months; no transfer tax",
+          "url": null,
+          "at": "2026-09-10T09:15:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    },
+    "ONCHAIN": {
+      "status": "HEALTHY",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Treasury movements match announced multisig schedule; no insider concentration",
+          "url": null,
+          "at": "2026-09-10T09:20:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    },
+    "SOCIAL": {
+      "status": "ORGANIC",
+      "evidence": [
+        {
+          "source": "social-analysis",
+          "detail": "Follower growth curve organic; bot ratio under 4%; no paid-promotion markers",
+          "url": null,
+          "at": "2026-09-10T09:25:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-10T09:30:00Z"
+    }
+  },
+  "status": "ALLOW",
+  "reasons": [
+    "all six dimensions meet the ALLOW baseline"
+  ],
+  "status_history": [
+    {
+      "from": "DISCOVERED",
+      "to": "ALLOW",
+      "reason": "initial ruling: all six dimensions meet the ALLOW baseline",
+      "at": "2026-09-10T09:30:00Z"
+    }
+  ],
+  "updated_at": "2026-09-10T09:30:00Z"
+}

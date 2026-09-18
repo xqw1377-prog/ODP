@@ -1,0 +1,75 @@
+{
+  "project_id": "prj_nimbus_dex",
+  "collected_at": "2026-09-11T15:30:00Z",
+  "maturity": "FIXTURE",
+  "observations": {
+    "TEAM": [
+      {
+        "source": "public-registry",
+        "detail": "Two of four core members publicly identified; no adverse history found",
+        "url": null,
+        "at": "2026-09-11T15:00:00Z",
+        "findings": ["PARTIAL_IDENTITY"]
+      }
+    ],
+    "PRODUCT": [
+      {
+        "source": "onchain",
+        "detail": "Working testnet router with documented API; no mainnet deployment yet",
+        "url": "https://nimbusrouter.example",
+        "at": "2026-09-11T15:05:00Z",
+        "findings": ["TESTNET_WORKING"]
+      }
+    ],
+    "CODE": [
+      {
+        "source": "github",
+        "detail": "No commits in 71 days; last release predates announcement",
+        "url": null,
+        "at": "2026-09-11T15:10:00Z",
+        "findings": ["STALE_REPO"]
+      },
+      {
+        "source": "github",
+        "detail": "Repository observed via public mirror only",
+        "url": null,
+        "at": "2026-09-11T15:10:30Z",
+        "findings": ["SOURCE_UNVERIFIED"]
+      }
+    ],
+    "TOKEN": [
+      {
+        "source": "onchain",
+        "detail": "Token tradable while product remains testnet-only",
+        "url": null,
+        "at": "2026-09-11T15:15:00Z",
+        "findings": ["LIVE_TOKEN_PRE_PRODUCT"]
+      },
+      {
+        "source": "onchain",
+        "detail": "Mint authority still held by deployer key",
+        "url": null,
+        "at": "2026-09-11T15:15:30Z",
+        "findings": ["MINT_AUTHORITY_RETAINED"]
+      }
+    ],
+    "ONCHAIN": [
+      {
+        "source": "onchain",
+        "detail": "No abnormal treasury movement detected in observation window",
+        "url": null,
+        "at": "2026-09-11T15:20:00Z",
+        "findings": ["NO_ABNORMAL_FLOWS"]
+      }
+    ],
+    "SOCIAL": [
+      {
+        "source": "social-analysis",
+        "detail": "Growth spike coincides with two paid KOL threads; core discussion quality moderate",
+        "url": null,
+        "at": "2026-09-11T15:25:00Z",
+        "findings": ["PAID_KOL_THREADS"]
+      }
+    ]
+  }
+}

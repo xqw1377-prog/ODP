@@ -1,0 +1,12 @@
+{
+  "project_id": "prj_phantomx",
+  "name": "PhantomX",
+  "symbol": "PHTX",
+  "website": "https://phantomx.example",
+  "x_account": "@phantomx_official",
+  "github": null,
+  "chain": "solana",
+  "token_address": "PHTXt0kEnAddr3ssExampleX7qVNE9dJm1LkzPwR4TgZ",
+  "discovered_at": "2026-09-12T10:00:00Z",
+  "discovery_sources": ["social", "onchain"]
+}

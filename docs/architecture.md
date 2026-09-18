@@ -34,12 +34,12 @@
 
 | 模块 | 位置 | 阶段 | 说明 |
 |---|---|---|---|
-| Domain Contract | `packages/domain` | **P0-1(本仓库当前)** | 7 个冻结 schema + 状态机 + Merkle 分配格式,纯函数零 IO |
-| Project Passport 引擎 | `packages/domain` 规则层 + 后续 API | P0-2 | 由 candidate 生成六维 passport,复现 G2 fixtures |
+| Domain Contract | `packages/domain` | P0-1(已验收) | 7 个冻结 schema + 状态机 + Merkle 分配格式,纯函数零 IO |
+| Passport Engine | `packages/passport-engine` | **P0-2(本轮)** | Trust Pipeline:发现输入 → 证据组装 → 派生裁决 → 校验持久化 → Radar/Detail 读模型。证据成熟度 = FIXTURE |
 | Matching 引擎 | `packages/api`(待建) | P0-3 | 确定性打分 + match_reasons |
 | Solana Distributor | `programs/distributor`(Anchor,待建) | P0-4 | vault / root / claim / 防重复 claim |
 | Web(4 页面) | `packages/web`(待建) | P0-2~P0-6 | Radar / Passport / Distribution / Claim |
-| 存储 | `ODP_DATA_DIR` 文件型 JSON | P0 | 不引入数据库;接口按可替换设计 |
+| 存储 | `ODP_DATA_DIR` 文件型 JSON | P0 | 双向 schema 校验 + 原子写;接口按可替换设计 |
 
 ## 3. 冻结的领域契约(G1)
 
@@ -150,14 +150,48 @@ COMMITTED ──CLAIMS_OPENED──▶ LIVE ──CLOSED──▶ CLOSED
 
 | 测试域 | 覆盖点 | 位置 |
 |---|---|---|
-| Schema(G1) | 7 schema 解析 fixtures;非法字段/枚举/金额格式拒绝 | `tests/schema.test.ts` |
-| Passport | 三 fixture 聚合复现;REJECT 终态;迁移写 history;聚合确定性 | `tests/passport.test.ts` |
-| Distribution | 合法事件链;非法跳步拒绝;分配守恒 | `tests/distribution.test.ts` |
-| Merkle | root 顺序无关;有效 proof 通过;错钱包/金额/proof 拒绝;重复叶子拒绝 | `tests/distribution.test.ts` |
+| Schema(G1) | 7 schema 解析 fixtures;非法字段/枚举/金额格式拒绝 | `domain/tests/schema.test.ts` |
+| Passport(G1) | 三 fixture 聚合复现;派生锁(伪造 status/reasons/顺序);迁移写 history;聚合确定性 | `domain/tests/passport.test.ts` |
+| Distribution(G1) | 合法事件链;非法跳步拒绝;分配守恒 | `domain/tests/distribution.test.ts` |
+| Merkle(G1) | root 顺序无关;有效 proof 通过;错钱包/金额/proof 拒绝;重复叶子拒绝 | `domain/tests/distribution.test.ts` |
+| Golden Path(G2) | candidate+evidence → 三态复现;与 golden 输出 deepEqual;同输入字节稳定;evidence fixture 不是 passport | `passport-engine/tests/pipeline.test.ts` |
+| 证据边界(G2) | 缺维度证据→WATCH;malformed/跨维 finding/未知 finding/错配 project_id 拒绝 | `passport-engine/tests/pipeline.test.ts` |
+| 重裁决(G2) | ALLOW→REJECT 带 history;不变证据不追加 history;REJECT→ALLOW 恢复 | `passport-engine/tests/pipeline.test.ts` |
+| 持久化(G2) | 原子写 round-trip;伪造持久化文件读取失败;未知字段读取失败;path traversal 拒绝 | `passport-engine/tests/engine.test.ts` |
+| 读模型(G2) | Radar 三态+过滤、reasons 来自持久化 passport;Detail 六维+provenance;孤儿 passport 报错 | `passport-engine/tests/engine.test.ts` |
 
 链上层(double claim、vault balance conservation)在 P0-4 以 Solana 测试覆盖,此处不冒充。
 
-## 9. 预留边界(P0 不实现,但契约已留位)
+## 9. Passport Engine(P0-2,证据成熟度 = FIXTURE)
+
+Trust Pipeline 的唯一正式入口在 `packages/passport-engine`:
+
+```text
+ProjectCandidate(来自 DiscoverySource)
++
+EvidenceBundle(原始 observation,含 findings + provenance)
+↓
+六维 Collector(TEAM/PRODUCT/CODE/TOKEN/ONCHAIN/SOCIAL)
+  —— 只产生维度事实(status/evidence/warnings/unknowns),无权决定总状态
+↓
+PassportDims
+↓
+buildPassport / reassessPassport(domain 层,内部走 derivePassportRuling)
+↓
+ValidatedJsonStore 持久化(写入前 parse,读取后 parse,临时文件 + 原子 rename)
+↓
+Radar / Passport Detail 读模型(只从持久化数据派生,无第二套状态)
+```
+
+关键约束:
+
+- **输入与输出分离**:`fixtures/discovery/`(候选)与 `fixtures/evidence/`(原始证据)是流水线仅有的输入;`fixtures/expected/` 的 golden passport 只用于输出比对,`scripts/regen-golden` 从原始输入幂等重生成。
+- **EvidenceBundle 不是 PassportDims**:observation 携带机器可读 `findings`(枚举,维度归属强制),provenance(source/detail/url/at)逐条保留进维度 evidence;collector 对不属于自己的 finding 直接抛错。
+- **证据成熟度**:`maturity ∈ {FIXTURE, SIMULATED, PUBLIC-SOURCE, ONCHAIN}`。当前全部 FIXTURE —— 只能宣称 `PASSPORT PIPELINE = PASS-FIXTURE`,不得宣称真实审计能力。
+- **持久化防伪**:写前 `ProjectPassportSchema.parse()`、读后 `ProjectPassportSchema.parse()`(含派生锁)——数据库手改 / JSON 手改 / 部分写入都表现为 READ FAIL,而非静默接受;record id 白名单 `[a-z0-9][a-z0-9_-]{0,63}` 阻断 path traversal。
+- **Discovery 边界**:仅实现 `FixtureDiscoverySource`;X API / GitHub API / Solana RPC / AI Agent 全部 HOLD,未来作为 `DiscoverySource` 接口的同形替换。
+
+## 10. 预留边界(P0 不实现,但契约已留位)
 
 - `ODP_HUMAN_SOURCE=fixture | x_oauth`:Human 身份来源开关,真实 X OAuth 是后续阶段的同形替换。
 - `discovery_sources[]` 字段按未来自动 Discovery 设计,P0 用 seed/半自动/fixture 填充。

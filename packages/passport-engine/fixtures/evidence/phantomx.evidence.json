@@ -1,0 +1,68 @@
+{
+  "project_id": "prj_phantomx",
+  "collected_at": "2026-09-12T11:30:00Z",
+  "maturity": "FIXTURE",
+  "observations": {
+    "TEAM": [
+      {
+        "source": "public-registry",
+        "detail": "No identifiable team; domain registered 11 days before token launch",
+        "url": null,
+        "at": "2026-09-12T11:00:00Z",
+        "findings": ["UNKNOWN_OPERATORS"]
+      }
+    ],
+    "PRODUCT": [
+      {
+        "source": "web",
+        "detail": "Website is a static landing page with buy button; token live, product absent",
+        "url": "https://phantomx.example",
+        "at": "2026-09-12T11:05:00Z",
+        "findings": ["LANDING_PAGE_ONLY"]
+      }
+    ],
+    "CODE": [
+      {
+        "source": "github",
+        "detail": "No public repository; no verified program source on explorer",
+        "url": null,
+        "at": "2026-09-12T11:10:00Z",
+        "findings": ["NO_PUBLIC_CODE"]
+      }
+    ],
+    "TOKEN": [
+      {
+        "source": "onchain",
+        "detail": "Honeypot pattern: sell instruction reverts for non-whitelisted holders; freeze authority active",
+        "url": null,
+        "at": "2026-09-12T11:15:00Z",
+        "findings": ["HONEYPOT_PATTERN", "FREEZE_AUTHORITY_ACTIVE"]
+      },
+      {
+        "source": "onchain",
+        "detail": "Concentrated insider cluster controls 61% of circulating supply",
+        "url": null,
+        "at": "2026-09-12T11:15:30Z",
+        "findings": ["INSIDER_CONCENTRATION"]
+      }
+    ],
+    "ONCHAIN": [
+      {
+        "source": "onchain",
+        "detail": "Wash-trading loop across 14 freshly-funded wallets inflates volume 40x",
+        "url": null,
+        "at": "2026-09-12T11:20:00Z",
+        "findings": ["WASH_TRADING_LOOP"]
+      }
+    ],
+    "SOCIAL": [
+      {
+        "source": "social-analysis",
+        "detail": "85% of followers scored as bots; engagement template-identical across accounts",
+        "url": null,
+        "at": "2026-09-12T11:25:00Z",
+        "findings": ["BOT_DOMINANCE"]
+      }
+    ]
+  }
+}

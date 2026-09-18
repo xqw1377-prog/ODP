@@ -16,10 +16,12 @@ Discover → Audit (ALLOW/WATCH/REJECT) → Match → Deposit on Solana → Clai
 
 ```bash
 npm install
+npm run build       # 编译所有 workspace(先 domain 后依赖它的包)
 npm run typecheck   # src + tests 全部过 tsc 静态类型门
-npm run build       # 编译所有 workspace
 npm test            # 运行所有测试
 ```
+
+> 顺序注意:workspace 之间存在依赖(如 `@odp/passport-engine` → `@odp/domain` 的 dist 类型),请先 build 再 typecheck/test。
 
 环境要求:Node ≥ 20(开发环境为 v24)。复制 `.env.example` 为 `.env` 后按需修改;P0 阶段链上只使用 devnet。
 
@@ -31,11 +33,16 @@ CI:GitHub Actions(Node 20)在每次 push / PR 上执行 `npm ci → typecheck �
 ODP/
 ├── docs/                  # 白皮书、开工令、架构文档
 ├── packages/
-│   └── domain/            # [P0-1] 冻结的领域契约:7 个 schema、状态机、Merkle 分配格式
-│       ├── src/           # schema + 纯函数(无 IO、无框架依赖)
-│       ├── fixtures/      # ALLOW / WATCH / REJECT 项目 + Human fixtures
-│       └── tests/         # schema 测试、状态机测试、守恒与 Merkle 测试
-└── (后续)packages/web · packages/api · programs/distributor   # P0-2 之后逐步进入
+│   ├── domain/            # [P0-1] 冻结的领域契约:7 个 schema、状态机、Merkle 分配格式
+│   │   ├── src/           # schema + 纯函数(无 IO、无框架依赖)
+│   │   ├── fixtures/      # ALLOW / WATCH / REJECT 项目 + Human fixtures
+│   │   └── tests/         # schema 测试、状态机测试、守恒与 Merkle 测试
+│   └── passport-engine/   # [P0-2] Trust Pipeline:发现输入 → 证据组装 → 派生裁决 → 校验持久化 → 读模型
+│       ├── src/           # discovery / evidence / collectors / pipeline / store / readmodel / engine
+│       ├── fixtures/      # discovery/(候选) evidence/(原始证据) expected/(golden 输出,仅比对用)
+│       ├── scripts/       # regen-golden(从原始输入重生成 golden,幂等)
+│       └── tests/         # G2 golden path、证据边界、重裁决、持久化与读模型测试
+└── (后续)packages/web · packages/api · programs/distributor   # P0-3 之后逐步进入
 ```
 
 ## P0 门禁状态
@@ -46,7 +53,7 @@ ODP/
 |---|---|---|
 | G0 Repo Baseline | repo / README / architecture / env example / build / test | PASS-LOCAL |
 | G1 Domain Contract | 7 个冻结 schema(strict)+ 派生裁决锁 + 状态一致性 + schema tests | PASS-LOCAL(P0-1R/R2 修订后) |
-| G2 Passport Golden Fixture | ALLOW / WATCH / REJECT 三 fixture | IMPLEMENTED-OFFLINE(fixture 骨架已入库,规则引擎复现在 P0-2) |
+| G2 Passport Golden Fixture | candidate+evidence → 独立生成 → 三态复现 + 持久化 + 读模型 | PASS-LOCAL(PASSPORT PIPELINE = PASS-FIXTURE) |
 | G3 Matching | 确定性 MatchResult + 解释 | NOT-STARTED |
 | G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |
 | G5 End-to-End | Radar → Claim Confirmed 全链路 | NOT-STARTED |
