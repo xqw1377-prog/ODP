@@ -2,15 +2,24 @@
 
 **Discover → Trust → Match → Distribute — Good projects find the right people.**
 
+> **Token finds the human.** 黑客松 Golden Path 已全线闭合(G0–G5 PASS):真实浏览器 × 真实 Solana Devnet。
+
+## Hackathon 提交包
+
+| 材料 | 位置 |
+|---|---|
+| 3 分钟 Pitch / 演示脚本 | [docs/pitch.md](docs/pitch.md) |
+| 提交页文案(一句话/描述/证据链接) | [docs/submission.md](docs/submission.md) |
+| 现场演示稳定运行手册 | [docs/demo-runbook.md](docs/demo-runbook.md) |
+| 浏览器点击 E2E 证据(最后一环) | [docs/browser-e2e-evidence-dst_aurora_demo_20260918150700.md](docs/browser-e2e-evidence-dst_aurora_demo_20260918150700.md) |
+| Devnet 攻击矩阵证据(003) | [docs/devnet-evidence-dst_aurora_devnet_003.md](docs/devnet-evidence-dst_aurora_devnet_003.md) |
+| 页面截图 | [docs/screenshots/](docs/screenshots) |
+
 - 白皮书:[docs/whitepaper-v0.1.md](docs/whitepaper-v0.1.md)
 - P0 开工令:[docs/p0-kickoff.md](docs/p0-kickoff.md)
 - 架构说明:[docs/architecture.md](docs/architecture.md)
 
-当前阶段:**P0 / Hackathon Golden Path**。唯一目标是跑通一条真实闭环:
-
-```text
-Discover → Audit (ALLOW/WATCH/REJECT) → Match → Deposit on Solana → Claim → Receipt
-```
+当前阶段:**P0 冻结(G0–G5 全 PASS),进入提交材料与现场演示。**
 
 ## Quickstart
 

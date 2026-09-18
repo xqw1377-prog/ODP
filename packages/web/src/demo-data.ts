@@ -207,6 +207,7 @@ export function mayaWhyYou(matches: MatchResult[]): string[] {
 }
 
 function prettyTag(tag: string): string {
+  if (tag === "depin") return "DePIN";
   const words = tag.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1));
   return words.join(" ");
 }
