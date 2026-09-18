@@ -43,7 +43,7 @@
 
 ## 3. 冻结的领域契约(G1)
 
-七个 schema 定义于 `packages/domain/src`,任何模块不得私改字段名:
+七个 schema 定义于 `packages/domain/src`,任何模块不得私改字段名。**所有 schema 均为 strict:未知字段直接拒绝,不允许静默 strip**(例如混入 `magic_trust_score` 会被 REJECT)。
 
 | Schema | 关键字段 | 说明 |
 |---|---|---|
@@ -80,22 +80,29 @@
                      TOKEN = HEALTHY
                      ONCHAIN = HEALTHY
                      SOCIAL = ORGANIC
-4. 其余   → ALLOW
+4. NO_EVIDENCE → WATCH   任何一个维度 evidence=[](Trust Must Be Evidence-Based,
+                     状态主张没有证据不产生 ALLOW;reason 形如 NO_EVIDENCE: TOKEN)
+5. 其余   → ALLOW
 ```
 
 每一步的命中维度都写入 `reasons[]`,满足"必须可以说明为什么是这个状态"。`unknowns[]` 只展示、不参与裁决。
 
-### 4.3 状态迁移
+### 4.3 状态迁移:reassess,而非 transition
+
+**协议宪法级约束:状态必须由证据产生,不能由调用者指定。**
+
+不存在 `transitionPassport(passport, status)` 这类直接改总状态的 API。唯一的改判入口是:
 
 ```text
-DISCOVERED ──▶ ALLOW / WATCH / REJECT     (初始裁决,由聚合规则产生)
-ALLOW    ──▶ WATCH / REJECT               (持续审计降级,如团队钱包异常)
-WATCH    ──▶ ALLOW / REJECT               (证据补齐升级 / 新 fatal)
-REJECT   ──▶ ∅                            (P0 中 REJECT 为终态)
-同状态迁移为 no-op,不写 history
+reassessPassport(previous, nextDims, reason, at)
+  → nextStatus = aggregatePassportStatus(nextDims)   // 强制重新聚合
+  → dims / status / reasons / status_history / updated_at 一次性更新
 ```
 
-每次变化追加 `{from, to, reason, at}` 到 `status_history[]`,形成可验证时间记录。
+- 提交的是新证据,不是新状态;持久化的 Passport 永远不会与六维事实自相矛盾。
+- 降级与恢复都只能由证据变化驱动(ALLOW→WATCH→REJECT 或反向);P0 没有绕开 dims 的申诉通道。
+- 聚合结果不变时,history 不追加(dims/updated_at 照常刷新)。
+- 状态真正变化时追加 `{from, to, reason, at}`,schema 层强制:history 首项 from=DISCOVERED、末项 to=当前状态、链路连续。
 
 ## 5. Distribution 状态机
 
@@ -117,13 +124,16 @@ COMMITTED ──CLAIMS_OPENED──▶ LIVE ──CLOSED──▶ CLOSED
 
 ## 6. Merkle 分配格式
 
+**MERKLE-WIRE-FORMAT = PROVISIONAL(非 FROZEN)。** 在 TypeScript 与 Rust/Solana 实现就以下跨语言 test vector 完全一致(leaf bytes / leaf hash / tree root / proof / verification result)之前,不得宣称冻结;此项必须在 P0-4 / G4 前完成。当前保留 SHA-256——在没有链上实测 CU 数据之前不更换哈希算法。
+
 - **叶子**:`sha256(UTF8(distribution_id + "\n" + wallet + "\n" + amount))`。amount 使用 canonical 字符串,不含小数点与 leading zeros。distribution_id 进叶子以阻止跨分发重放 proof。
 - **建树**:叶子先按 `Buffer.compare` 排序(输入顺序不影响 root),两两哈希;**节点哈希对两个子哈希先排序再拼接**(`sha256(sort(a,b))`),因此验证无需方向位;奇数个节点时末节点原样上提。
 - **约束**:重复叶子(同 wallet+amount)建树时抛错;proof 验证失败、wallet/amount 不匹配均拒绝。
 
 ## 7. 金额与 ID 约定
 
-- 所有 token 数量为 canonical base-10 整数字符串(正则 `^\d+$` 且 `BigInt(s).toString() === s`)。
+- 所有 token 数量为 canonical base-10 整数字符串:正则 `^\d+$`、无 leading zeros,且 **≤ 2^64-1(u64 上界)**。
+- `Distribution.total_amount`、`Allocation.amount`、Receipt `amount` 额外要求 **> 0**(PositiveU64String)——u64 类型边界与"业务必须为正"是两个独立关注点。
 - 守恒检查:Σ allocation.amount === distribution.total_amount,不等即抛错。
 - ID(`project_id` / `human_id` / `distribution_id`)为非空字符串,由生成方保证稳定。
 

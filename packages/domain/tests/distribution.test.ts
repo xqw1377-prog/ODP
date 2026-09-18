@@ -4,6 +4,7 @@ import {
   createDistribution,
   applyDistributionEvent,
   assertAllocationConservation,
+  DistributionSchema,
   AllocationSchema,
   allocationLeaf,
   buildMerkleTree,
@@ -82,6 +83,73 @@ describe("distribution state machine", () => {
     assert.throws(() =>
       applyDistributionEvent(funded(), { type: "ROOT_COMMITTED", allocation_root: "ab".repeat(32), total_recipients: 0 }),
     );
+  });
+});
+
+// ── R5: cross-field state invariants ───────────────────────────────────
+
+describe("distribution cross-field invariants (R5)", () => {
+  function committedRecord(): Record<string, unknown> {
+    return {
+      distribution_id: DST,
+      project_id: "prj_aurora_net",
+      token_mint: MINT,
+      vault: "Va11tAddressExample0000000000000000000000000",
+      allocation_root: "ab".repeat(32),
+      total_amount: "8000",
+      total_recipients: 3,
+      status: "COMMITTED",
+      created_at: "2026-09-18T01:00:00Z",
+      deposit_tx: "DepositTxExample000000000000000000000000000000000",
+      committed_at: "2026-09-18T02:00:00Z",
+      closed_at: null,
+    };
+  }
+
+  it("the canonical committed record parses", () => {
+    DistributionSchema.parse(committedRecord());
+  });
+
+  it("PENDING_DEPOSIT with vault present rejected", () => {
+    const bad = { ...createDistribution(DST, "prj_aurora_net", MINT, "8000"), vault: "Va11tAddressExample0000000000000000000000000" };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("PENDING_DEPOSIT with recipients > 0 rejected", () => {
+    const bad = { ...createDistribution(DST, "prj_aurora_net", MINT, "8000"), total_recipients: 3 };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("LIVE with null allocation_root rejected", () => {
+    const bad = { ...committedRecord(), status: "LIVE", allocation_root: null };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("COMMITTED with zero recipients rejected", () => {
+    const bad = { ...committedRecord(), total_recipients: 0 };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("COMMITTED without committed_at rejected", () => {
+    const bad = { ...committedRecord(), committed_at: null };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("DEPOSITED without deposit_tx rejected", () => {
+    const bad = {
+      ...committedRecord(),
+      status: "DEPOSITED",
+      allocation_root: null,
+      total_recipients: 0,
+      committed_at: null,
+      deposit_tx: null,
+    };
+    assert.throws(() => DistributionSchema.parse(bad));
+  });
+
+  it("CLOSED without closed_at rejected", () => {
+    const bad = { ...committedRecord(), status: "CLOSED" };
+    assert.throws(() => DistributionSchema.parse(bad));
   });
 });
 

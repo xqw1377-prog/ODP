@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 import type { Allocation } from "./distribution.js";
 
 /**
- * ODP Merkle allocation format (frozen):
+ * ODP Merkle allocation format — **MERKLE-WIRE-FORMAT = PROVISIONAL**.
+ * Not frozen until the TypeScript and Rust/Solana implementations produce
+ * identical cross-language test vectors (leaf bytes, leaf hash, tree root,
+ * proof, verification result) in P0-4 / G4. Do NOT swap SHA-256 for another
+ * hash before measured CU data from the on-chain program justifies it.
+ *
  *   leaf   = sha256(UTF8(distribution_id + "\n" + wallet + "\n" + amount))
  *   node   = sha256(concat(sort(child_a, child_b)))
  * Leaves are sorted by Buffer.compare before pairing (input order does not

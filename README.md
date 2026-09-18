@@ -16,11 +16,14 @@ Discover → Audit (ALLOW/WATCH/REJECT) → Match → Deposit on Solana → Clai
 
 ```bash
 npm install
-npm run build     # 编译所有 workspace
-npm test          # 运行所有测试
+npm run typecheck   # src + tests 全部过 tsc 静态类型门
+npm run build       # 编译所有 workspace
+npm test            # 运行所有测试
 ```
 
 环境要求:Node ≥ 20(开发环境为 v24)。复制 `.env.example` 为 `.env` 后按需修改;P0 阶段链上只使用 devnet。
+
+CI:GitHub Actions(Node 20)在每次 push / PR 上执行 `npm ci → typecheck → build → test`([ci.yml](.github/workflows/ci.yml))。**PASS-LOCAL 与 CI GREEN 分开记录。**
 
 ## 仓库结构
 
@@ -42,7 +45,7 @@ ODP/
 | Gate | 范围 | 状态 |
 |---|---|---|
 | G0 Repo Baseline | repo / README / architecture / env example / build / test | PASS-LOCAL |
-| G1 Domain Contract | 7 个冻结 schema + schema tests | PASS-LOCAL |
+| G1 Domain Contract | 7 个冻结 schema(strict)+ 状态一致性 + schema tests | PASS-LOCAL(P0-1R 修订后) |
 | G2 Passport Golden Fixture | ALLOW / WATCH / REJECT 三 fixture | IMPLEMENTED-OFFLINE(fixture 骨架已入库,规则引擎复现在 P0-2) |
 | G3 Matching | 确定性 MatchResult + 解释 | NOT-STARTED |
 | G4 Solana Distribution | deposit / root / claim / double-claim reject | NOT-STARTED |
