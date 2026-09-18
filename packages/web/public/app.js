@@ -36,18 +36,26 @@ async function renderRadar() {
   badge.hidden = true;
   const { radar } = await api("/api/radar");
   app.innerHTML = `
-    <h1>Good projects struggle to find <em>real users</em>.<br/>Real users struggle to find <em>good projects</em>.</h1>
-    <p class="sub">ODP discovers projects, audits the evidence, and only distributes what earns it.</p>
+    <section class="page-intro">
+      <div class="eyebrow">Open distribution, earned</div>
+      <h1>Token finds<br/><em>the human.</em></h1>
+      <p class="sub">ODP discovers credible crypto projects, proves what is true, and distributes ownership to the humans who genuinely fit.</p>
+    </section>
     <div class="grid-3">
-      ${radar.map((p) => `
-        <div class="card project-card ${p.project_id === "prj_aurora_net" ? "hero" : ""}" data-id="${esc(p.project_id)}">
+      ${radar.map((p, i) => `
+        <div class="card project-card ${p.project_id === "prj_aurora_net" ? "hero" : ""}" data-id="${esc(p.project_id)}" ${p.project_id === "prj_aurora_net" ? 'role="link" tabindex="0" aria-label="Open Aurora Net passport"' : ""}>
+          <div class="card-top"><span class="project-index">PROJECT / 0${i + 1}</span><span class="badge ${p.status}">${p.status}</span></div>
           <div class="name">${esc(p.name)}</div>
           <div class="symbol">${esc(p.symbol)}</div>
-          <span class="badge ${p.status}">${p.status}</span>
           <div class="why">${esc(p.reason ?? "")}</div>
+          ${p.project_id === "prj_aurora_net" ? '<div class="open-label">Explore the evidence →</div>' : ""}
         </div>`).join("")}
     </div>`;
-  app.querySelector(".project-card.hero")?.addEventListener("click", () => nav("/project/aurora"));
+  const hero = app.querySelector(".project-card.hero");
+  hero?.addEventListener("click", () => nav("/project/aurora"));
+  hero?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") nav("/project/aurora");
+  });
 }
 
 // ── Scene 2 — Trust ─────────────────────────────────────────────────────
@@ -64,8 +72,11 @@ async function renderProject() {
       <div class="n">${dims[k].evidence.length} evidence · ${dims[k].warnings.length} warnings · ${dims[k].unknowns.length} unknowns</div>
     </div>`;
   app.innerHTML = `
-    <h1>Why can <em>${esc(candidate.name)}</em> enter the network?</h1>
-    <p class="sub">Six-dimension Project Passport, derived from evidence — never declared, never bought.</p>
+    <section class="page-intro">
+      <div class="eyebrow">Project Passport / ${esc(candidate.symbol)}</div>
+      <h1>Trust must be<br/><em>earned in public.</em></h1>
+      <p class="sub">Why can ${esc(candidate.name)} enter the network? Six dimensions, derived from evidence — never declared, never bought.</p>
+    </section>
     <div class="grid-6">
       ${["TEAM", "PRODUCT", "CODE", "TOKEN", "ONCHAIN", "SOCIAL"].map(dimCard).join("")}
     </div>
@@ -75,7 +86,7 @@ async function renderProject() {
       <div class="note">ALLOW = eligible for distribution ≠ investment endorsement.</div>
       <div class="reasons">${passport.reasons.map((r) => "· " + esc(r)).join("<br/>")}</div>
     </div>
-    <button class="cta" id="find">Find the right people</button>`;
+    <button class="cta" id="find">Find the right humans</button>`;
   document.getElementById("find").addEventListener("click", () => nav("/distribution/aurora"));
 }
 
@@ -97,14 +108,18 @@ async function renderDistribution() {
 
   const onchain = data.onchain;
   const onchainCard = onchain ? `
-    <div class="card" style="margin-top:16px">
+    <div class="card chain-card">
+      <div class="chain-head">
+        <div class="chain-title"><span class="chain-icon">S</span><span><b>Solana Distribution</b><small>${esc(onchain.network).toUpperCase()} / LIVE PROTOCOL STATE</small></span></div>
+        <span class="status-pill ready">READY TO CLAIM</span>
+      </div>
+      <div class="chain-body">
       <div class="kv">
         <div class="k">Network</div><div>Solana ${esc(onchain.network)}</div>
         <div class="k">Program</div><div class="mono">${esc(onchain.program_id.slice(0, 10))}…${esc(onchain.program_id.slice(-6))}</div>
         <div class="k">Recipients</div><div>${data.allocations.length}</div>
         <div class="k">Total</div><div>${fmt(onchain.total)}</div>
       </div>
-      <div style="margin-top:14px"><span class="status-pill ready">READY TO CLAIM</span></div>
       <details class="hashbox">
         <summary>View commitments (Merkle Root · Manifest · PDA)</summary>
         <div class="kv">
@@ -115,22 +130,26 @@ async function renderDistribution() {
           <div class="k">Distribution ID</div><div class="mono">${esc(onchain.distribution_id)}</div>
         </div>
       </details>
+      </div>
     </div>` : `
     <div class="card" style="margin-top:16px; color:var(--muted)">
       No live demo distribution yet — run <code>npm run demo:prepare</code>.
     </div>`;
 
   app.innerHTML = `
-    <h1>Why <em>these humans</em>?</h1>
-    <p class="sub">Matching runs only for ALLOW projects. Sib is excluded by risk — no score can outbid it.</p>
-    ${humans}
+    <section class="page-intro">
+      <div class="eyebrow">Human matching / Aurora Net</div>
+      <h1>Reach the right humans.<br/><em>Not the loudest wallets.</em></h1>
+      <p class="sub">Matching runs only for ALLOW projects. Risk is a hard gate: no audience size, influence, or score can outbid it.</p>
+    </section>
+    <div class="human-list">${humans}</div>
     <div class="big-quote">Followers don't decide.<br/><em>Relevant crypto behavior does.</em></div>
 
     <h2>Selected Humans — equal allocation</h2>
-    ${data.allocations.map((a) => `
-      <div class="card" style="display:flex; justify-content:space-between; margin-bottom:10px">
-        <b>${esc(a.display)}</b><span>${fmt(a.amount)}</span>
-      </div>`).join("")}
+    <div class="allocation-grid">${data.allocations.map((a) => `
+      <div class="card allocation-card">
+        <div><b>${esc(a.display)}</b><small>Eligible human</small></div><span>${fmt(a.amount)}</span>
+      </div>`).join("")}</div>
     <p class="small-note">
       Maya score 0.942 · Dan score 0.491 — but both receive the same amount.
       <b> Match decides eligibility. Allocation follows protocol policy.</b>
@@ -156,16 +175,6 @@ async function renderClaim() {
     return;
   }
 
-  const base = `
-    <div class="claim-hero card">
-      <h1>Aurora found <em>you</em>.</h1>
-      <div class="check-list" style="text-align:left; max-width:420px; margin:22px auto">
-        ${data.why.map((w) => `<div class="ok">${esc(w)}</div>`).join("")}
-      </div>
-      <div class="amount">${fmt(data.amount)}</div>
-      <div class="unit">AURORA DEMO TOKENS</div>
-    </div>`;
-
   if (data.claimed) {
     renderClaimed({
       signature: null,
@@ -176,11 +185,27 @@ async function renderClaim() {
     return;
   }
 
-  app.innerHTML = base + `
-    <div style="text-align:center">
-      <button class="cta" id="claim" style="font-size:18px; padding:16px 36px">Claim on Solana</button>
-      <div class="small-note">Demo Wallet · real Devnet transaction · confirmation in a few seconds</div>
-      <div id="status"></div>
+  app.innerHTML = `
+    <section class="page-intro">
+      <div class="eyebrow">Personal distribution / Maya</div>
+    </section>
+    <div class="claim-layout">
+      <div class="claim-hero card">
+        <h1>Aurora found<br/><em>you.</em></h1>
+        <div class="amount">${fmt(data.amount)}</div>
+        <div class="unit">AURORA DEMO TOKENS / EQUAL ALLOCATION</div>
+      </div>
+      <div class="claim-side card">
+        <div class="side-label">Why you were selected</div>
+        <div class="check-list">
+          ${data.why.map((w) => `<div class="ok">${esc(w)}</div>`).join("")}
+        </div>
+        <div class="claim-action">
+          <button class="cta" id="claim">Claim on Solana</button>
+          <div class="small-note">Demo Wallet · real Devnet transaction · confirmation in a few seconds</div>
+          <div id="status" aria-live="assertive"></div>
+        </div>
+      </div>
     </div>`;
 
   document.getElementById("claim").addEventListener("click", async () => {
@@ -204,20 +229,26 @@ async function renderClaim() {
     steps.querySelector('[data-step="distribute"]').innerHTML = "Claimed ✓";
     const amount = result.amount ?? amountArg ?? data.amount;
     app.innerHTML = `
+      <section class="page-intro">
+        <div class="eyebrow">On-chain receipt / Confirmed</div>
+        <h1>Ownership,<br/><em>delivered.</em></h1>
+      </section>
+      <div class="claim-layout">
       <div class="claim-hero card">
-        <h1>Claimed on Solana <em>✓</em></h1>
+        <span class="status-pill claimed">CLAIMED ON SOLANA</span>
         <div class="amount">${fmt(result.maya_balance)}</div>
         <div class="unit">AURORA DEMO TOKENS RECEIVED BY MAYA</div>
       </div>
-      <div class="card">
+      <div class="claim-side card">
+        <div class="side-label">Distribution receipt</div>
         <div class="kv">
           <div class="k">Project</div><div><b>Aurora Net</b></div>
           <div class="k">Human</div><div><b>Maya</b></div>
           <div class="k">Allocation</div><div>${fmt(amount)}</div>
           <div class="k">Network</div><div>Solana Devnet</div>
-          <div class="k">Status</div><div><span class="status-pill claimed">CLAIMED</span></div>
+          <div class="k">Status</div><div>Finalized</div>
         </div>
-        ${result.signature ? `<div style="margin-top:16px"><a class="link" target="_blank" rel="noopener" href="${esc(result.explorer)}">View on Solana Explorer ↗</a></div>` : ""}
+        ${result.signature ? `<div style="margin-top:20px"><a class="link" target="_blank" rel="noopener" href="${esc(result.explorer)}">View on Solana Explorer ↗</a></div>` : ""}
         <details class="hashbox">
           <summary>Receipt details</summary>
           <div class="kv">
@@ -229,7 +260,8 @@ async function renderClaim() {
           </div>
         </details>
       </div>
-      <div class="card" style="margin-top:16px">
+      </div>
+      <div class="card proof-card">
         <b>Protocol Protection</b>
         <div class="check-list">
           <div class="ok">Proof verified on-chain</div>
@@ -243,7 +275,7 @@ async function renderClaim() {
              href="https://github.com/xqw1377-prog/ODP/blob/main/docs/devnet-evidence-dst_aurora_devnet_003.md">View protocol evidence ↗</a>
         </div>
       </div>
-      <div class="big-quote" style="margin-top:34px">Discover → Trust → Match → Distribute.<br/><em>That's ODP.</em></div>
+      <div class="big-quote">Discover → Trust → Match → Distribute.<br/><em>Token finds the human.</em></div>
       <div style="text-align:center"><a class="cta ghost" href="/radar">← Back to Radar</a></div>`;
   }
 
