@@ -1,0 +1,100 @@
+{
+  "project_id": "prj_nimbus_dex",
+  "dims": {
+    "TEAM": {
+      "status": "PARTIAL",
+      "evidence": [
+        {
+          "source": "public-registry",
+          "detail": "Two of four core members publicly identified; no adverse history found",
+          "url": null,
+          "at": "2026-09-11T15:00:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": ["two anonymous core contributors"],
+      "updated_at": "2026-09-11T15:00:00Z"
+    },
+    "PRODUCT": {
+      "status": "TESTNET",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Working testnet router with documented API; no mainnet deployment yet",
+          "url": "https://nimbusrouter.example",
+          "at": "2026-09-11T15:05:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-11T15:05:00Z"
+    },
+    "CODE": {
+      "status": "STALE",
+      "evidence": [
+        {
+          "source": "github",
+          "detail": "No commits in 71 days; last release predates announcement",
+          "url": null,
+          "at": "2026-09-11T15:10:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": ["repo may be private; observed mirror only"],
+      "updated_at": "2026-09-11T15:10:00Z"
+    },
+    "TOKEN": {
+      "status": "CAUTION",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Token tradable while product remains testnet-only",
+          "url": null,
+          "at": "2026-09-11T15:15:00Z"
+        }
+      ],
+      "warnings": ["mint authority retained by deployer with no announced revocation schedule"],
+      "unknowns": [],
+      "updated_at": "2026-09-11T15:15:00Z"
+    },
+    "ONCHAIN": {
+      "status": "HEALTHY",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "No abnormal treasury movement detected in observation window",
+          "url": null,
+          "at": "2026-09-11T15:20:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-11T15:20:00Z"
+    },
+    "SOCIAL": {
+      "status": "MIXED",
+      "evidence": [
+        {
+          "source": "social-analysis",
+          "detail": "Growth spike coincides with two paid KOL threads; core discussion quality moderate",
+          "url": null,
+          "at": "2026-09-11T15:25:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-11T15:25:00Z"
+    }
+  },
+  "status": "WATCH",
+  "reasons": ["TOKEN carries 1 warning(s)"],
+  "status_history": [
+    {
+      "from": "DISCOVERED",
+      "to": "WATCH",
+      "reason": "initial ruling: TOKEN carries 1 warning(s)",
+      "at": "2026-09-11T15:30:00Z"
+    }
+  ],
+  "updated_at": "2026-09-11T15:30:00Z"
+}

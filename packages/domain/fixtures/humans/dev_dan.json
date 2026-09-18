@@ -1,0 +1,10 @@
+{
+  "human_id": "hum_dev_dan",
+  "x_id": "@dev_dan",
+  "wallet": "DanWa11etAddressExample22222222222222222222222",
+  "human_confidence": 0.9,
+  "reputation": 0.81,
+  "network_score": 0.52,
+  "interest_tags": ["solana", "developer", "infra", "open_source"],
+  "risk_flags": []
+}

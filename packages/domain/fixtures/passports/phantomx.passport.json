@@ -1,0 +1,104 @@
+{
+  "project_id": "prj_phantomx",
+  "dims": {
+    "TEAM": {
+      "status": "UNVERIFIED",
+      "evidence": [
+        {
+          "source": "public-registry",
+          "detail": "No identifiable team; domain registered 11 days before token launch",
+          "url": null,
+          "at": "2026-09-12T11:00:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": ["operator identity entirely unknown"],
+      "updated_at": "2026-09-12T11:00:00Z"
+    },
+    "PRODUCT": {
+      "status": "MISSING",
+      "evidence": [
+        {
+          "source": "web",
+          "detail": "Website is a static landing page with buy button; token live, product absent",
+          "url": "https://phantomx.example",
+          "at": "2026-09-12T11:05:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-12T11:05:00Z"
+    },
+    "CODE": {
+      "status": "NONE",
+      "evidence": [
+        {
+          "source": "github",
+          "detail": "No public repository; no verified program source on explorer",
+          "url": null,
+          "at": "2026-09-12T11:10:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-12T11:10:00Z"
+    },
+    "TOKEN": {
+      "status": "MALICIOUS",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Honeypot pattern: sell instruction reverts for non-whitelisted holders; freeze authority active",
+          "url": null,
+          "at": "2026-09-12T11:15:00Z"
+        }
+      ],
+      "warnings": ["concentrated insider cluster controls 61% of circulating supply"],
+      "unknowns": [],
+      "updated_at": "2026-09-12T11:15:00Z"
+    },
+    "ONCHAIN": {
+      "status": "MALICIOUS",
+      "evidence": [
+        {
+          "source": "onchain",
+          "detail": "Wash-trading loop across 14 Freshly-funded wallets inflates volume 40x",
+          "url": null,
+          "at": "2026-09-12T11:20:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-12T11:20:00Z"
+    },
+    "SOCIAL": {
+      "status": "FAKE",
+      "evidence": [
+        {
+          "source": "social-analysis",
+          "detail": "85% of followers scored as bots; engagement template-identical across accounts",
+          "url": null,
+          "at": "2026-09-12T11:25:00Z"
+        }
+      ],
+      "warnings": [],
+      "unknowns": [],
+      "updated_at": "2026-09-12T11:25:00Z"
+    }
+  },
+  "status": "REJECT",
+  "reasons": [
+    "TOKEN=MALICIOUS is a fatal signal",
+    "ONCHAIN=MALICIOUS is a fatal signal",
+    "SOCIAL=FAKE is a fatal signal"
+  ],
+  "status_history": [
+    {
+      "from": "DISCOVERED",
+      "to": "REJECT",
+      "reason": "initial ruling: TOKEN=MALICIOUS is a fatal signal; ONCHAIN=MALICIOUS is a fatal signal; SOCIAL=FAKE is a fatal signal",
+      "at": "2026-09-12T11:30:00Z"
+    }
+  ],
+  "updated_at": "2026-09-12T11:30:00Z"
+}

@@ -1,0 +1,145 @@
+# ODP 架构说明(P0)
+
+本文档描述 P0 / Golden Path 阶段的系统结构、冻结的领域契约,以及各状态机的精确定义。
+
+## 1. 系统数据流
+
+```text
+┌────────────────────────── Off-chain(链下)──────────────────────────┐
+│                                                                      │
+│  Discovery Engine          Trust Engine            Matching Engine  │
+│  ────────────────          ─────────────           ──────────────── │
+│  social / onchain /        Project Passport        Human Profile     │
+│  developer / capital /     六维证据 + 规则聚合       Interest Graph   │
+│  network 来源              ALLOW/WATCH/REJECT      MatchResult      │
+│        │                        │                        │          │
+│        ▼                        ▼                        ▼          │
+│  ProjectCandidate ──────▶ ProjectPassport ──────▶ Allocation 集合    │
+│                                                    (Merkle root)    │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │ deposit + root commit
+┌──────────────────────────────▼───────────────────────────────────────┐
+│                        On-chain(Solana, P0-4)                        │
+│  Distribution Vault → Allocation Root Commit → Claim Program          │
+│  (防 double claim / 错钱包 / 错金额 / 错 proof) → Distribution Receipt │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+职责边界:
+
+- **链下**负责发现、审计、匹配、信誉计算(可进化为 AI,但输出必须落到冻结 schema)。
+- **链上**负责资产托管、规则承诺(allocation root)、claim 执行、不可篡改证据。
+
+## 2. 模块地图
+
+| 模块 | 位置 | 阶段 | 说明 |
+|---|---|---|---|
+| Domain Contract | `packages/domain` | **P0-1(本仓库当前)** | 7 个冻结 schema + 状态机 + Merkle 分配格式,纯函数零 IO |
+| Project Passport 引擎 | `packages/domain` 规则层 + 后续 API | P0-2 | 由 candidate 生成六维 passport,复现 G2 fixtures |
+| Matching 引擎 | `packages/api`(待建) | P0-3 | 确定性打分 + match_reasons |
+| Solana Distributor | `programs/distributor`(Anchor,待建) | P0-4 | vault / root / claim / 防重复 claim |
+| Web(4 页面) | `packages/web`(待建) | P0-2~P0-6 | Radar / Passport / Distribution / Claim |
+| 存储 | `ODP_DATA_DIR` 文件型 JSON | P0 | 不引入数据库;接口按可替换设计 |
+
+## 3. 冻结的领域契约(G1)
+
+七个 schema 定义于 `packages/domain/src`,任何模块不得私改字段名:
+
+| Schema | 关键字段 | 说明 |
+|---|---|---|
+| `ProjectCandidate` | project_id, name, symbol, website, x_account, github, chain, token_address, discovered_at, discovery_sources[] | 发现层输出;discovery_sources ∈ social/onchain/developer/capital/network |
+| `ProjectPassport` | project_id, dims{TEAM,PRODUCT,CODE,TOKEN,ONCHAIN,SOCIAL}, status, reasons[], status_history[], updated_at | 每维:`status + evidence[] + warnings[] + unknowns[] + updated_at`;总状态只允许 ALLOW/WATCH/REJECT |
+| `HumanProfile` | human_id, x_id, wallet, human_confidence, reputation, network_score, interest_tags[], risk_flags[] | P0 身份 = X identity + Solana wallet;OAuth 边界已预留 |
+| `MatchResult` | project_id, human_id, match_score, match_reasons[] | match_reasons 至少 1 条,禁止黑盒分数 |
+| `Distribution` | distribution_id, project_id, token_mint, vault, allocation_root, total_amount, total_recipients, status | 金额一律使用 **canonical base-10 字符串**(u64),禁用浮点 |
+| `Allocation` | distribution_id, human_id, wallet, amount | Merkle 叶子由此派生 |
+| `DistributionReceipt` | project_id, distribution_id, wallet, amount, token_mint, claim_tx, claimed_at, allocation_root | claim 完成后生成,必须可跳转链上证据 |
+
+## 4. Passport 状态机
+
+### 4.1 状态词表(每维)
+
+| 维度 | 状态集合 |
+|---|---|
+| TEAM | VERIFIED · PARTIAL · UNVERIFIED · CAUTION · MALICIOUS |
+| PRODUCT | MISSING · IDEA · DEMO · TESTNET · LIVE · REVENUE |
+| CODE | NONE · UNVERIFIED · STALE · ACTIVE · AUDITED |
+| TOKEN | HEALTHY · CAUTION · MALICIOUS |
+| ONCHAIN | HEALTHY · WATCH · ABNORMAL · MALICIOUS |
+| SOCIAL | ORGANIC · MIXED · BOT_HEAVY · FAKE |
+
+### 4.2 聚合规则(确定性,按序短路)
+
+```text
+1. FATAL  → REJECT   TEAM=MALICIOUS ∣ TOKEN=MALICIOUS ∣ ONCHAIN=MALICIOUS ∣ SOCIAL=FAKE
+2. WARN   → WATCH    任何维度存在 warnings[](P0 保守规则)
+3. SHORT  → WATCH    未达 ALLOW 基线:
+                     TEAM ≥ PARTIAL
+                     PRODUCT ≥ TESTNET
+                     CODE ∈ {ACTIVE, AUDITED}
+                     TOKEN = HEALTHY
+                     ONCHAIN = HEALTHY
+                     SOCIAL = ORGANIC
+4. 其余   → ALLOW
+```
+
+每一步的命中维度都写入 `reasons[]`,满足"必须可以说明为什么是这个状态"。`unknowns[]` 只展示、不参与裁决。
+
+### 4.3 状态迁移
+
+```text
+DISCOVERED ──▶ ALLOW / WATCH / REJECT     (初始裁决,由聚合规则产生)
+ALLOW    ──▶ WATCH / REJECT               (持续审计降级,如团队钱包异常)
+WATCH    ──▶ ALLOW / REJECT               (证据补齐升级 / 新 fatal)
+REJECT   ──▶ ∅                            (P0 中 REJECT 为终态)
+同状态迁移为 no-op,不写 history
+```
+
+每次变化追加 `{from, to, reason, at}` 到 `status_history[]`,形成可验证时间记录。
+
+## 5. Distribution 状态机
+
+```text
+PENDING_DEPOSIT ──DEPOSIT_CONFIRMED──▶ DEPOSITED ──ROOT_COMMITTED──▶ COMMITTED
+COMMITTED ──CLAIMS_OPENED──▶ LIVE ──CLOSED──▶ CLOSED
+```
+
+事件携带的副作用:
+
+| 事件 | 合法来源态 | 写入字段 |
+|---|---|---|
+| `DEPOSIT_CONFIRMED{vault, deposit_tx}` | PENDING_DEPOSIT | vault, deposit_tx |
+| `ROOT_COMMITTED{allocation_root, total_recipients}` | DEPOSITED | allocation_root(64 hex), total_recipients ≥ 1 |
+| `CLAIMS_OPENED` | COMMITTED | — |
+| `CLOSED` | LIVE | closed_at |
+
+非法事件直接抛错(不允许跳步),保证"所有规则在分发开始前可验证"。
+
+## 6. Merkle 分配格式
+
+- **叶子**:`sha256(UTF8(distribution_id + "\n" + wallet + "\n" + amount))`。amount 使用 canonical 字符串,不含小数点与 leading zeros。distribution_id 进叶子以阻止跨分发重放 proof。
+- **建树**:叶子先按 `Buffer.compare` 排序(输入顺序不影响 root),两两哈希;**节点哈希对两个子哈希先排序再拼接**(`sha256(sort(a,b))`),因此验证无需方向位;奇数个节点时末节点原样上提。
+- **约束**:重复叶子(同 wallet+amount)建树时抛错;proof 验证失败、wallet/amount 不匹配均拒绝。
+
+## 7. 金额与 ID 约定
+
+- 所有 token 数量为 canonical base-10 整数字符串(正则 `^\d+$` 且 `BigInt(s).toString() === s`)。
+- 守恒检查:Σ allocation.amount === distribution.total_amount,不等即抛错。
+- ID(`project_id` / `human_id` / `distribution_id`)为非空字符串,由生成方保证稳定。
+
+## 8. 测试策略
+
+| 测试域 | 覆盖点 | 位置 |
+|---|---|---|
+| Schema(G1) | 7 schema 解析 fixtures;非法字段/枚举/金额格式拒绝 | `tests/schema.test.ts` |
+| Passport | 三 fixture 聚合复现;REJECT 终态;迁移写 history;聚合确定性 | `tests/passport.test.ts` |
+| Distribution | 合法事件链;非法跳步拒绝;分配守恒 | `tests/distribution.test.ts` |
+| Merkle | root 顺序无关;有效 proof 通过;错钱包/金额/proof 拒绝;重复叶子拒绝 | `tests/distribution.test.ts` |
+
+链上层(double claim、vault balance conservation)在 P0-4 以 Solana 测试覆盖,此处不冒充。
+
+## 9. 预留边界(P0 不实现,但契约已留位)
+
+- `ODP_HUMAN_SOURCE=fixture | x_oauth`:Human 身份来源开关,真实 X OAuth 是后续阶段的同形替换。
+- `discovery_sources[]` 字段按未来自动 Discovery 设计,P0 用 seed/半自动/fixture 填充。
+- Passport 聚合当前是规则引擎;未来 AI 审计输出必须落到同一六维 schema,不允许绕过状态机。

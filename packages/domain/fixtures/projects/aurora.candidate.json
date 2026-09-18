@@ -1,0 +1,12 @@
+{
+  "project_id": "prj_aurora_net",
+  "name": "Aurora Net",
+  "symbol": "AURA",
+  "website": "https://auroranet.example",
+  "x_account": "@auroranet",
+  "github": "https://github.com/auroranet-example",
+  "chain": "solana",
+  "token_address": "AURAt0kEnAddr3ssExampleX7qVNE9dJm1LkzPwR4TgHc",
+  "discovered_at": "2026-09-10T08:15:00Z",
+  "discovery_sources": ["social", "onchain", "developer"]
+}

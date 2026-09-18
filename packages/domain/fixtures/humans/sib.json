@@ -1,0 +1,10 @@
+{
+  "human_id": "hum_sib",
+  "x_id": "@airdrop_sib_042",
+  "wallet": "SibWa11etAddressExample33333333333333333333333",
+  "human_confidence": 0.11,
+  "reputation": 0.05,
+  "network_score": 0.02,
+  "interest_tags": ["airdrops", "farming"],
+  "risk_flags": ["SYBIL", "WALLET_CLUSTER"]
+}

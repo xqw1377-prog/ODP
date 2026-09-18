@@ -1,0 +1,21 @@
+{
+  "name": "@odp/domain",
+  "version": "0.1.0",
+  "description": "ODP frozen domain contracts: 7 schemas, state machines, Merkle allocation format",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}
