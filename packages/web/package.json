@@ -1,0 +1,23 @@
+{
+  "name": "@odp/web",
+  "version": "0.1.0",
+  "description": "ODP hackathon demo web layer: 4-scene golden path UI + demo-wallet claim server",
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "demo:prepare": "tsx scripts/demo-prepare.ts",
+    "dev": "tsx src/server.ts",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@odp/domain": "*",
+    "@odp/passport-engine": "*",
+    "@odp/matching-engine": "*",
+    "@odp/distribution-engine": "*",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0"
+  }
+}

@@ -11,7 +11,7 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build -w @odp/domain && npm run build -w @odp/passport-engine && npm run build -w @odp/matching-engine && npm run build -w @odp/distribution-engine",
+    "build": "npm run build -w @odp/domain && npm run build -w @odp/passport-engine && npm run build -w @odp/matching-engine && npm run build -w @odp/distribution-engine && npm run build -w @odp/web",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
