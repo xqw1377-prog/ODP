@@ -16,7 +16,7 @@ import {
   mintTo,
 } from "@solana/spl-token";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { allocationLeaf, buildMerkleTree, createDistribution, merkleProof } from "@odp/domain";
@@ -41,9 +41,36 @@ import { buildAllocations, buildManifest, manifestHash } from "../src/index.js";
 
 const PROGRAM_ID = new PublicKey("GRgiEJUGZxYzoQp7jJSvt4hZvv1AvojoC7Fgz2HyyFeW");
 const RPC = process.env.ODP_LOCALNET_RPC ?? "http://127.0.0.1:8899";
-const DISTRIBUTION_ID = "dst_aurora_demo_001";
+/** Devnet evidence runs override this (ODP_DISTRIBUTION_ID=dst_aurora_devnet_001) to avoid PDA collisions. */
+const DISTRIBUTION_ID = process.env.ODP_DISTRIBUTION_ID ?? "dst_aurora_demo_001";
 const PROJECT_ID = "prj_aurora_net";
 const TOTAL = 10_000n;
+const IS_DEVNET = RPC.includes("devnet");
+const EXPLORER = (sig: string): string =>
+  IS_DEVNET
+    ? `https://explorer.solana.com/tx/${sig}?cluster=devnet`
+    : `https://explorer.solana.com/tx/${sig}?cluster=custom&customUrl=${encodeURIComponent(RPC)}`;
+
+interface EvidenceRecord {
+  cluster: string;
+  distribution_id: string;
+  at: string;
+  program_id: string;
+  keys: Record<string, string>;
+  values: Record<string, string>;
+  transactions: Record<string, { signature: string; explorer: string; err?: string; log_tail?: string[] }>;
+  checks: string[];
+}
+const EVIDENCE: EvidenceRecord = {
+  cluster: RPC,
+  distribution_id: DISTRIBUTION_ID,
+  at: new Date().toISOString(),
+  program_id: PROGRAM_ID.toBase58(),
+  keys: {},
+  values: {},
+  transactions: {},
+  checks: [],
+};
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "../../..");
@@ -91,6 +118,44 @@ async function expectTxFailure(label: string, run: () => Promise<unknown>): Prom
   }
 }
 
+/**
+ * Submit an EXPECTED-TO-FAIL transaction with skipPreflight so it actually
+ * lands on chain, then read back its signature + program logs. The rejection
+ * is then verifiable in Solana Explorer, not just in our console.
+ */
+async function expectFailureEvidenced(label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<void> {
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+  const tx = new Transaction({ blockhash, lastValidBlockHeight }).add(ix);
+  tx.sign(...signers);
+  const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true });
+
+  let info: Awaited<ReturnType<typeof connection.getTransaction>> = null;
+  for (let i = 0; i < 45 && info === null; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    info = await connection.getTransaction(sig, { maxSupportedTransactionVersion: 0 });
+  }
+  if (info === null) {
+    ok(label, false, `failure tx never landed: ${sig}`);
+    return;
+  }
+  const err = info.meta?.err ?? null;
+  const logs = info.meta?.logMessages ?? [];
+  const tail = logs.slice(-6);
+  ok(label, err !== null, err !== null ? `${sig}` : "transaction unexpectedly succeeded");
+  console.log(`    explorer: ${EXPLORER(sig)}`);
+  for (const line of tail) console.log(`    log: ${line.slice(0, 160)}`);
+  EVIDENCE.transactions[label] = {
+    signature: sig,
+    explorer: EXPLORER(sig),
+    err: err === null ? undefined : JSON.stringify(err),
+    log_tail: tail,
+  };
+}
+
+async function recordTx(label: string, sig: string): Promise<void> {
+  EVIDENCE.transactions[label] = { signature: sig, explorer: EXPLORER(sig) };
+}
+
 // ── wait for validator ─────────────────────────────────────────────────
 const connection = new Connection(RPC, "confirmed");
 for (let i = 0; i < 30; i++) {
@@ -108,6 +173,38 @@ const project = loadKeypair("project");
 const maya = loadKeypair("maya");
 const dan = loadKeypair("dan");
 const sib = loadKeypair("sib");
+EVIDENCE.keys = {
+  project_authority: project.publicKey.toBase58(),
+  maya: maya.publicKey.toBase58(),
+  dan: dan.publicKey.toBase58(),
+  sib: sib.publicKey.toBase58(),
+};
+
+// ── single-wallet fan-out (P0-4B §A2) ─────────────────────────────────
+// Only the project wallet needs external funding; it tops up the humans.
+{
+  const LAMPORTS = 1_000_000_000;
+  const MIN_HUMAN = 0.02 * LAMPORTS;
+  const TOPUP = 0.05 * LAMPORTS;
+  const projectBalance = await connection.getBalance(project.publicKey);
+  console.log(`project wallet: ${project.publicKey.toBase58()} = ${projectBalance / LAMPORTS} SOL`);
+  if (projectBalance < 0.05 * LAMPORTS) {
+    throw new Error(`project wallet underfunded (${projectBalance} lamports) — fund it with devnet SOL first`);
+  }
+  for (const [name, kp] of [["maya", maya], ["dan", dan], ["sib", sib]] as const) {
+    const bal = await connection.getBalance(kp.publicKey);
+    if (bal < MIN_HUMAN) {
+      const tx = new Transaction().add(
+        SystemProgram.transfer({ fromPubkey: project.publicKey, toPubkey: kp.publicKey, lamports: TOPUP }),
+      );
+      const sig = await sendAndConfirmTransaction(connection, tx, [project]);
+      console.log(`  fan-out ${name}: ${EXPLORER(sig)}`);
+      EVIDENCE.transactions[`fanout_${name}`] = { signature: sig, explorer: EXPLORER(sig) };
+    } else {
+      console.log(`  ${name} already funded (${bal / LAMPORTS} SOL)`);
+    }
+  }
+}
 
 // ── demo mint (decimals = 0, per the frozen P0 policy) ─────────────────
 console.log("setup: mint + token accounts");
@@ -261,9 +358,10 @@ function claimIx(
   });
 }
 
-const send = (ix: TransactionInstruction, signers: Keypair[]): Promise<string> =>
+const send = async (label: string, ix: TransactionInstruction, signers: Keypair[]): Promise<string> =>
   sendAndConfirmTransaction(connection, new Transaction().add(ix), signers).then((sig) => {
-    console.log(`    tx: https://explorer.solana.com/tx/${sig}?cluster=custom&customUrl=${encodeURIComponent(RPC)}`);
+    console.log(`    tx: ${EXPLORER(sig)}`);
+    EVIDENCE.transactions[label] = { signature: sig, explorer: EXPLORER(sig) };
     return sig;
   });
 
@@ -285,62 +383,64 @@ const danProof = merkleProof(tree, leaves[1]!).map((b) => Buffer.from(b));
 // ── the §21 matrix ─────────────────────────────────────────────────────
 
 console.log("1. initialize");
-await send(initializeIx(), [project]);
+await send("initialize_distribution", initializeIx(), [project]);
 {
   const s = await distributionState();
   ok("initialize PASS (PENDING, total recorded)", s.status === 0 && s.total === TOTAL);
 }
 
 console.log("2. fund exact amount");
-await send(fundIx(), [project]);
+await send("fund_distribution", fundIx(), [project]);
 {
   const vaultBalance = (await connection.getTokenAccountBalance(vault)).value.amount;
   const s = await distributionState();
   ok("fund exact amount PASS (FUNDED, vault=10000)", s.status === 1 && vaultBalance === TOTAL.toString(), `vault=${vaultBalance}`);
 }
 
-console.log("3. claim before commit/open → FAIL");
-await expectTxFailure("claim before LIVE FAIL", () => send(claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]));
+console.log("3. claim before commit/open → FAIL (evidenced on-chain)");
+await expectFailureEvidenced("claim_before_live_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya, project]);
 
 console.log("4. commit root");
-await send(commitIx(tree.root, Buffer.from(manifestHashHex, "hex"), allocations.length), [project]);
+await send("commit_root", commitIx(tree.root, Buffer.from(manifestHashHex, "hex"), allocations.length), [project]);
 {
   const s = await distributionState();
   ok("root commit PASS (COMMITTED)", s.status === 2);
 }
 
-console.log("5. root mutation after commit → FAIL");
-await expectTxFailure("root mutation after commit FAIL", () =>
-  send(commitIx(sha256("evil-root"), Buffer.alloc(32, 1), 2), [project]),
+console.log("5. root mutation after commit → FAIL (evidenced on-chain)");
+await expectFailureEvidenced(
+  "root_mutation_REJECTED",
+  commitIx(sha256("evil-root"), Buffer.alloc(32, 1), 2),
+  [project],
 );
 
 console.log("6. open claims");
-await send(openIx(), [project]);
+await send("open_claims", openIx(), [project]);
 {
   const s = await distributionState();
   ok("open claims PASS (LIVE)", s.status === 3);
 }
 
-console.log("7. negative claim cases");
-await expectTxFailure("wrong amount FAIL", () => send(claimIx(maya, mayaAta, DISTRIBUTION_ID, 4999n, mayaProof), [maya]));
+console.log("7. negative claim cases (evidenced on-chain)");
+await expectFailureEvidenced("wrong_amount_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 4999n, mayaProof), [maya, project]);
 const tamperedProof = mayaProof.map((b, i) => (i === 0 ? Buffer.alloc(32, 0xab) : b));
-await expectTxFailure("wrong proof FAIL", () => send(claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, tamperedProof), [maya]));
-await expectTxFailure("sib (no allocation) claim FAIL", () => send(claimIx(sib, sibAta, DISTRIBUTION_ID, 5000n, danProof), [sib]));
-await expectTxFailure("cross-distribution proof FAIL", () => send(claimIx(maya, mayaAta, "dst_other_999", 5000n, mayaProof), [maya]));
+await expectFailureEvidenced("wrong_proof_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, tamperedProof), [maya, project]);
+await expectFailureEvidenced("sib_no_allocation_REJECTED", claimIx(sib, sibAta, DISTRIBUTION_ID, 5000n, danProof), [sib, project]);
+await expectFailureEvidenced("cross_distribution_REJECTED", claimIx(maya, mayaAta, "dst_other_999", 5000n, mayaProof), [maya, project]);
 
 console.log("8. Maya claim PASS");
-await send(claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]);
+await send("maya_claim", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]);
 {
   const mayaBalance = (await connection.getTokenAccountBalance(mayaAta)).value.amount;
   const s = await distributionState();
   ok("Maya claim PASS (5000 received, claimed=5000)", mayaBalance === "5000" && s.claimed === 5000n, `maya=${mayaBalance} claimed=${s.claimed}`);
 }
 
-console.log("9. Maya second claim → FAIL (program-level double claim)");
-await expectTxFailure("Maya second claim FAIL", () => send(claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya]));
+console.log("9. Maya second claim → FAIL (evidenced on-chain, program-level double-claim rejection)");
+await expectFailureEvidenced("maya_second_claim_REJECTED", claimIx(maya, mayaAta, DISTRIBUTION_ID, 5000n, mayaProof), [maya, project]);
 
 console.log("10. Dan claim PASS");
-await send(claimIx(dan, danAta, DISTRIBUTION_ID, 5000n, danProof), [dan]);
+await send("dan_claim", claimIx(dan, danAta, DISTRIBUTION_ID, 5000n, danProof), [dan]);
 {
   const danBalance = (await connection.getTokenAccountBalance(danAta)).value.amount;
   const s = await distributionState();
@@ -355,11 +455,74 @@ console.log("11. conservation");
   ok("vault conservation PASS (vault+claimed=funded)", vaultBalance + s.claimed === TOTAL, `vault=${vaultBalance} claimed=${s.claimed}`);
 }
 
+// ── evidence summary ────────────────────────────────────────────────────
+{
+  const version = await connection.getVersion();
+  const mayaBalance = (await connection.getTokenAccountBalance(mayaAta)).value.amount;
+  const danBalance = (await connection.getTokenAccountBalance(danAta)).value.amount;
+  const vaultBalance = (await connection.getTokenAccountBalance(vault)).value.amount;
+  const s = await distributionState();
+  EVIDENCE.values = {
+    cluster_version: String(version["solana-core"] ?? JSON.stringify(version)),
+    demo_mint: MINT.toBase58(),
+    distribution_pda: distributionPda.toBase58(),
+    vault: vault.toBase58(),
+    allocation_maya: "5000",
+    allocation_dan: "5000",
+    allocation_root: rootHex,
+    manifest_hash: manifestHashHex,
+    claimed_amount: s.claimed.toString(),
+    total_amount: s.total.toString(),
+    maya_token_balance: mayaBalance,
+    dan_token_balance: danBalance,
+    vault_token_balance: vaultBalance,
+  };
+  EVIDENCE.checks.push(
+    `claimed_amount = ${s.claimed}`,
+    `maya = ${mayaBalance}, dan = ${danBalance}, vault = ${vaultBalance}`,
+    `vault + claimed = ${vaultBalance} + ${s.claimed} = ${BigInt(vaultBalance) + s.claimed} (funded = ${TOTAL})`,
+    `matrix: pass=${pass} fail=${fail}`,
+  );
+}
+
 console.log("");
-console.log(`LOCALNET MATRIX RESULT: pass=${pass} fail=${fail}`);
+console.log(`MATRIX RESULT: pass=${pass} fail=${fail}`);
 console.log(`distribution: ${distributionPda.toBase58()}`);
 console.log(`vault:        ${vault.toBase58()}`);
 console.log(`mint:         ${MINT.toBase58()}`);
 console.log(`root:         ${rootHex}`);
 console.log(`manifest:     ${manifestHashHex}`);
+
+if (IS_DEVNET) {
+  const file = path.join(REPO, "docs", `devnet-evidence-${DISTRIBUTION_ID}.md`);
+  const lines = [
+    `# Devnet Evidence — ${DISTRIBUTION_ID}`,
+    "",
+    `- generated: ${EVIDENCE.at}`,
+    `- cluster: \`${RPC}\` (solana-core ${EVIDENCE.values.cluster_version})`,
+    `- program id: \`${EVIDENCE.program_id}\``,
+    "",
+    "## Keys",
+    ...Object.entries(EVIDENCE.keys).map(([k, v]) => `- ${k}: \`${v}\``),
+    "",
+    "## Snapshot",
+    ...Object.entries(EVIDENCE.values).map(([k, v]) => `- ${k}: \`${v}\``),
+    "",
+    "## Transactions",
+    ...Object.entries(EVIDENCE.transactions).flatMap(([k, v]) => [
+      `### ${k}`,
+      `- signature: \`${v.signature}\``,
+      `- explorer: ${v.explorer}`,
+      ...(v.err ? [`- error: \`${v.err}\``] : []),
+      ...(v.log_tail ? ["- program log tail:", "```text", ...v.log_tail.map((l) => l.slice(0, 200)), "```"] : []),
+    ]),
+    "",
+    "## Checks",
+    ...EVIDENCE.checks.map((c) => `- ${c}`),
+    "",
+  ];
+  writeFileSync(file, lines.join("\n"), "utf8");
+  console.log(`evidence written: ${file}`);
+}
+
 if (fail > 0) process.exit(1);
