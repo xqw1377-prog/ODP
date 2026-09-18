@@ -100,12 +100,18 @@ export function createDemoServer() {
         if (state === null) return json(res, 503, { error: "no demo distribution — run npm run demo:prepare" });
         const status = await readMayaClaimStatus(state);
         if (status.claimed) {
+          console.log(`[${new Date().toISOString()}] POST /api/claim/maya -> 409 already-claimed dist=${state.distribution_id}`);
           return json(res, 409, { error: "already claimed", receipt_pda: status.receipt_pda });
         }
         if (!status.distribution_live) {
+          console.log(`[${new Date().toISOString()}] POST /api/claim/maya -> 409 not-live dist=${state.distribution_id}`);
           return json(res, 409, { error: "distribution is not LIVE" });
         }
         const result = await executeMayaClaim(state);
+        console.log(
+          `[${new Date().toISOString()}] POST /api/claim/maya -> 200 dist=${state.distribution_id} ` +
+            `sig=${result.signature} receipt=${result.receipt_pda} maya_balance=${result.maya_balance}`,
+        );
         return json(res, 200, result);
       }
 
