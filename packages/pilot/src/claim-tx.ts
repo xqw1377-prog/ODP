@@ -114,12 +114,18 @@ export interface ClaimRpc {
     signatures: string[],
     opts?: { searchTransactionHistory?: boolean },
   ): Promise<{ value: ({ err: unknown; confirmationStatus?: string } | null)[] }>;
-  getAccountInfo(pubkey: PublicKey): Promise<{ data: Uint8Array } | null>;
+  getTransaction(signature: string): Promise<unknown>;
+  getAccountInfo(pubkey: PublicKey): Promise<{ data: Uint8Array; owner?: unknown } | null>;
 }
 
-/** MACHINE GATE (P1-B review, blocker 3): a claim counts only when
+/** MACHINE GATE (upgraded P1-C-R1): a claim counts only when
     1. the submitted signature is confirmed on devnet with no error, AND
-    2. the ClaimReceipt PDA we derive for (distribution, claimant) exists.
+    2. the transaction ITSELF invokes the ODP distributor program and carries
+       the claimant, the distribution account and the expected ClaimReceipt
+       PDA among its accounts (claim_tx ↔ receipt bound — an unrelated
+       successful tx can no longer be booked as a claim), AND
+    3. the ClaimReceipt PDA we derive for (distribution, claimant) exists and
+       is owned by the distributor program.
     Browser assertions are never trusted — only the chain is. */
 export async function verifyClaimOnchain(
   rpc: ClaimRpc,
@@ -127,10 +133,11 @@ export async function verifyClaimOnchain(
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const { run } = input;
   if (run.onchain === null) return { ok: false, reason: "run is not prepared on devnet" };
+  const programId = run.onchain.program_id;
 
   // the receipt must be the one OUR run+wallet derivation expects
   const expectedReceipt = claimReceiptPda(
-    { programId: new PublicKey(run.onchain.program_id) },
+    { programId: new PublicKey(programId) },
     new PublicKey(run.onchain.distribution_pda),
     new PublicKey(input.wallet),
   );
@@ -149,15 +156,51 @@ export async function verifyClaimOnchain(
   if (status.confirmationStatus !== "confirmed" && status.confirmationStatus !== "finalized")
     return { ok: false, reason: `claim not confirmed yet (${status.confirmationStatus ?? "no status"})` };
 
-  let receipt: { data: Uint8Array } | null;
+  // fetch the transaction and bind it to this claim's accounts
+  let raw: unknown;
+  try {
+    raw = await rpc.getTransaction(input.signature);
+  } catch (err) {
+    return { ok: false, reason: `RPC error while fetching transaction: ${(err as Error).message}` };
+  }
+  if (raw === null || raw === undefined) return { ok: false, reason: "transaction not found on devnet" };
+  const tx = raw as {
+    meta?: { err?: unknown } | null;
+    transaction?: { message?: { accountKeys?: unknown[] }; instructions?: { programId?: unknown }[] };
+  };
+  if (!tx.meta || tx.meta.err !== null) return { ok: false, reason: "claim transaction failed on-chain" };
+
+  const keyStrings = (tx.transaction?.message?.accountKeys ?? []).map(keyToString);
+  const programStrings = (tx.transaction?.instructions ?? [])
+    .map((ix) => keyToString((ix as { programId?: unknown }).programId))
+    .filter((s): s is string => s !== null);
+  if (!programStrings.includes(programId) && !keyStrings.includes(programId))
+    return { ok: false, reason: "transaction does not invoke the ODP distributor program" };
+  if (!keyStrings.includes(input.wallet)) return { ok: false, reason: "claimant account missing from transaction" };
+  if (!keyStrings.includes(run.onchain.distribution_pda))
+    return { ok: false, reason: "distribution account missing from transaction" };
+  if (!keyStrings.includes(input.receiptPda))
+    return { ok: false, reason: "ClaimReceipt account missing from transaction" };
+
+  let receipt: { data: Uint8Array; owner?: unknown } | null;
   try {
     receipt = await rpc.getAccountInfo(new PublicKey(input.receiptPda));
   } catch (err) {
     return { ok: false, reason: `RPC error while checking receipt: ${(err as Error).message}` };
   }
   if (receipt === null) return { ok: false, reason: "ClaimReceipt does not exist on-chain" };
+  const ownerString = keyToString(receipt.owner);
+  if (ownerString !== programId)
+    return { ok: false, reason: "ClaimReceipt is not owned by the ODP distributor program" };
 
   return { ok: true };
+}
+
+function keyToString(key: unknown): string | null {
+  if (typeof key === "string") return key;
+  if (key !== null && key !== undefined && typeof (key as PublicKey).toBase58 === "function")
+    return (key as PublicKey).toBase58();
+  return null;
 }
 
 /** Record a claim ONLY after verifyClaimOnchain returned ok. Progress lives in

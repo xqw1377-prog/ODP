@@ -51,7 +51,10 @@ lines.push("");
 lines.push(`- Mint: ${accountLink(run.onchain?.mint ?? "n/a")}`);
 lines.push(`- Vault: ${accountLink(run.onchain?.vault ?? "n/a")}`);
 lines.push(`- Merkle root: \`${run.root}\``);
-lines.push(`- Manifest hash: \`${run.manifest_hash}\``);
+lines.push(`- Committed manifest hash: \`${run.committed_manifest_hash ?? run.manifest_hash}\``);
+if (run.status !== "DRY" && run.committed_manifest_hash !== null && run.committed_manifest_hash !== run.manifest_hash) {
+  lines.push(`- DRY manifest hash (superseded): \`${run.manifest_hash}\``);
+}
 lines.push("");
 lines.push("| Lifecycle | Transaction |");
 lines.push("| --- | --- |");

@@ -110,6 +110,11 @@ export const PilotRunSchema = z.strictObject({
   allocations: z.array(RunAllocationSchema),
   root: z.string().regex(/^[0-9a-f]{64}$/),
   manifest_hash: z.string().regex(/^[0-9a-f]{64}$/),
+  /* Once the run is LIVE, manifest_hash carries the hash actually committed
+     on-chain (rebuilt with the real mint). committed_manifest_hash records
+     that same on-chain fact explicitly for the evidence ledger; while DRY it
+     is null and manifest_hash is the placeholder-mint hash. */
+  committed_manifest_hash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
   // merkle proofs per wallet (array of base58-encoded proof buffers), private
   proofs: z.record(z.string(), z.array(z.string())),
   onchain: z

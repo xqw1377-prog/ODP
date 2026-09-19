@@ -34,7 +34,13 @@ import { toMatchIntent } from "../src/intake-project.js";
 /* P1-C gate 6 — generic devnet prepare: ANY project × ANY explicit recipient
    count. Same on-chain recipe as the frozen demo-prepare (which is left
    untouched), parameterized by the pilot run record. Recipients bring their
-   OWN wallets; the project authority keypair is the only key loaded here. */
+   OWN wallets; the project authority keypair is the only key loaded here.
+
+   AUTHORITY DISCIPLINE (P1-C-R1): PILOT-0 may use our own dedicated devnet
+   pilot authority. PILOT-1 with an external project requires the project to
+   run prepare/sign itself, or a dedicated devnet authority created for the
+   pilot — a project's production wallet private key must NEVER be handed to
+   ODP. */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "../../..");
@@ -179,6 +185,11 @@ store.runs.save({
   ...run,
   status: "LIVE",
   token_mint: mint.toBase58(),
+  // LIVE semantics: manifest_hash is now the hash actually committed on-chain
+  // (rebuilt with the real mint), and committed_manifest_hash records that
+  // fact explicitly so the evidence ledger matches chain state 1:1.
+  manifest_hash: mHash,
+  committed_manifest_hash: mHash,
   onchain: {
     network: RPC.includes("devnet") ? "devnet" : "custom",
     rpc: RPC,

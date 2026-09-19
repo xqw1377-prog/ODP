@@ -117,6 +117,7 @@ export function planRun(store: PilotStore, input: RunPlanInput): RunPlanResult {
     allocations: allocations.map((a) => ({ human_id: a.human_id, wallet: a.wallet, amount: a.amount })),
     root,
     manifest_hash: manifestHash(manifest),
+    committed_manifest_hash: null, // set at devnet prepare with the real mint
     proofs,
     onchain: null,
     claims: {},

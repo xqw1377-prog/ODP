@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Transaction } from "@solana/web3.js";
 import { verifyMerkleProof } from "@odp/domain";
-import { DISTRIBUTOR_PROGRAM_ID } from "@odp/distribution-engine";
+import { DISTRIBUTOR_PROGRAM_ID, buildManifest, manifestHash } from "@odp/distribution-engine";
 import { decideClaim, generatePassportForProject } from "../src/verify-claims.js";
-import { submitProject, type ProjectClaimInput } from "../src/intake-project.js";
+import { submitProject, toMatchIntent, type ProjectClaimInput } from "../src/intake-project.js";
 import { planRun } from "../src/runner.js";
 import { eligiblePool } from "../src/intake-human.js";
 import { assertClaimable, buildClaimTransaction, offlineBlockhash, recordConfirmedClaim, verifyClaimOnchain } from "../src/claim-tx.js";
@@ -236,19 +236,64 @@ test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger
   assert.deepEqual(tx.signatures[0]!.publicKey.toBytes(), base58Decode(h1.wallet));
   assert.ok(tx.instructions[0]!.programId.equals(DISTRIBUTOR_PROGRAM_ID));
 
-  // machine gate: only an on-chain confirmed signature + existing receipt records a claim
-  const goodRpc = {
-    getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "finalized" }] }),
-    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+  // machine gate (P1-C-R1): signature confirmed + the transaction ITSELF
+  // carries the claim accounts + the receipt exists and is program-owned
+  const claimAccounts = [h1.wallet, run.onchain!.distribution_pda, built.receipt_pda, DISTRIBUTOR_PROGRAM_ID.toBase58()];
+  const okTx = {
+    meta: { err: null },
+    transaction: {
+      message: { accountKeys: claimAccounts },
+      instructions: [{ programId: DISTRIBUTOR_PROGRAM_ID.toBase58() }],
+    },
   };
+  const rpcWith = (tx: unknown, receipt: { data: Uint8Array; owner?: unknown } | null) => ({
+    getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "finalized" }] }),
+    getTransaction: async () => tx,
+    getAccountInfo: async () => receipt,
+  });
+  const goodReceipt = { data: new Uint8Array(16), owner: DISTRIBUTOR_PROGRAM_ID };
+
   assert.deepEqual(
-    await verifyClaimOnchain(goodRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda }),
+    await verifyClaimOnchain(rpcWith(okTx, goodReceipt), { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda }),
     { ok: true },
   );
 
+  // R1 proof: an unrelated SUCCESSFUL tx (no claim accounts) cannot be booked
+  const unrelatedTx = {
+    meta: { err: null },
+    transaction: {
+      message: { accountKeys: [outsider.pubkey, "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFM1"] },
+      instructions: [{ programId: "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFM1" }],
+    },
+  };
+  const unrelated = await verifyClaimOnchain(rpcWith(unrelatedTx, goodReceipt), { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
+  assert.equal(unrelated.ok, false);
+  if (!unrelated.ok) assert.match(unrelated.reason, /distributor program/);
+
+  // tx missing the receipt account
+  const missingReceiptTx = {
+    meta: { err: null },
+    transaction: {
+      message: { accountKeys: [h1.wallet, run.onchain!.distribution_pda] },
+      instructions: [{ programId: DISTRIBUTOR_PROGRAM_ID.toBase58() }],
+    },
+  };
+  const missingReceipt = await verifyClaimOnchain(rpcWith(missingReceiptTx, goodReceipt), { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
+  assert.equal(missingReceipt.ok, false);
+  if (!missingReceipt.ok) assert.match(missingReceipt.reason, /ClaimReceipt account missing/);
+
+  // receipt owned by a foreign program
+  const foreignOwner = await verifyClaimOnchain(
+    rpcWith(okTx, { data: new Uint8Array(16), owner: Keypair.generate().publicKey }),
+    { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda },
+  );
+  assert.equal(foreignOwner.ok, false);
+  if (!foreignOwner.ok) assert.match(foreignOwner.reason, /not owned by/);
+
   const failedTxRpc = {
     getSignatureStatuses: async () => ({ value: [{ err: {}, confirmationStatus: "finalized" }] }),
-    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+    getTransaction: async () => okTx,
+    getAccountInfo: async () => goodReceipt,
   };
   const txFailed = await verifyClaimOnchain(failedTxRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
   assert.equal(txFailed.ok, false);
@@ -256,19 +301,21 @@ test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger
 
   const noReceiptRpc = {
     getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "confirmed" }] }),
+    getTransaction: async () => okTx,
     getAccountInfo: async () => null,
   };
   const noReceipt = await verifyClaimOnchain(noReceiptRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
   assert.equal(noReceipt.ok, false);
   if (!noReceipt.ok) assert.match(noReceipt.reason, /does not exist/);
 
-  const wrongReceipt = await verifyClaimOnchain(goodRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda.slice(0, -2) + "xy" });
+  const wrongReceipt = await verifyClaimOnchain(rpcWith(okTx, goodReceipt), { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda.slice(0, -2) + "xy" });
   assert.equal(wrongReceipt.ok, false);
   if (!wrongReceipt.ok) assert.match(wrongReceipt.reason, /does not match/);
 
   const unconfirmedRpc = {
     getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "processed" }] }),
-    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+    getTransaction: async () => okTx,
+    getAccountInfo: async () => goodReceipt,
   };
   const pending = await verifyClaimOnchain(unconfirmedRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
   assert.equal(pending.ok, false);
@@ -289,4 +336,49 @@ test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger
   // h2 and h3 remain claimable
   assert.equal(assertClaimable(store, updated, h2.wallet).ok, true);
   assert.equal(assertClaimable(store, updated, h3.wallet).ok, true);
+});
+
+test("R1 manifest semantics: real-mint rebuild changes the hash; LIVE run persists the committed hash", () => {
+  const store = makeTempStore();
+  const submitted = submitHelios(store);
+  for (const c of submitted.claims) {
+    decideClaim(store, submitted.project.project_id, c.claim_id, { verifier: "commander", decision: "VERIFIED" });
+  }
+  generatePassportForProject(store, submitted.project.project_id);
+  for (let i = 0; i < 3; i++) enrollHuman(store, { handle: `@human${i}` });
+  const planned = planRun(store, { project_id: submitted.project.project_id, total_amount: "3000", recipient_count: 3 });
+  assert.equal(planned.ok, true);
+  if (!planned.ok) return;
+  const dry = planned.run;
+  assert.equal(dry.committed_manifest_hash, null); // DRY: nothing committed on-chain yet
+
+  // rebuilding the manifest with a REAL mint must change the hash — this is
+  // exactly the mismatch R1 fixes (ledger previously kept the dry hash)
+  const detail = store.engine.getProjectPassport(submitted.project.project_id)!;
+  const intent = toMatchIntent(submitted.project);
+  const baseInput = {
+    distribution_id: dry.distribution_id,
+    project_id: submitted.project.project_id,
+    total_amount: dry.total_amount,
+    total_recipients: dry.recipient_count,
+    passport: detail.passport,
+    matchIntent: intent,
+    allocation_root: dry.root,
+    created_at: dry.created_at,
+  };
+  const dryManifest = buildManifest({ ...baseInput, token_mint: "mint-pending-dry-run" });
+  const realManifest = buildManifest({ ...baseInput, token_mint: Keypair.generate().publicKey.toBase58() });
+  const committed = manifestHash(realManifest);
+  assert.notEqual(manifestHash(dryManifest), committed);
+
+  // prepare persistence: LIVE run carries the committed hash under BOTH keys
+  store.runs.save({
+    ...dry,
+    status: "LIVE",
+    manifest_hash: committed,
+    committed_manifest_hash: committed,
+  });
+  const loaded = store.runs.get(dry.run_id)!;
+  assert.equal(loaded.manifest_hash, committed);
+  assert.equal(loaded.committed_manifest_hash, committed);
 });
