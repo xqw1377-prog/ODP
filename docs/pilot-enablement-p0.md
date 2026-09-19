@@ -61,7 +61,11 @@ Writes under the pilot data dir: `candidates/`, `passports/` (via `PassportEngin
 
 ## 2. Early Humans V0
 
-Slogan: **Stop hunting. Get discovered.**
+Landing (locked copy):
+
+- Headline: **Stop hunting. Get discovered.**
+- Sub: *Connect your X and Solana wallet. Tell ODP what you care about. Qualified crypto projects can find you when there’s a real match.*
+- Do not use “Join our beta”.
 
 Collects:
 
@@ -70,7 +74,14 @@ Collects:
 3. **3–5 interest tags** from: Solana, DePIN, AI, Developer, Node Operator, Consumer Crypto, DeFi, Gaming, Infrastructure, Early Adopter.
 4. **Explicit opt-in** checkbox (`consent: true`).
 
-UI: `http://127.0.0.1:3000/early-humans` (footer link). CLI:
+Funnel (sidecar, not HumanProfile):  
+`DISCOVERED → INVITED → LANDING → X CONNECTED → WALLET BOUND → CONSENTED → INTERESTS COMPLETED → ELIGIBLE HUMAN → MATCHED → CLAIMED`  
+
+**Only `ELIGIBLE_HUMAN` with no review flags counts as the pool.** Multi-wallet / multi-X collisions are stored as REVIEW (`WALLET_BOUND`) and are not matchable. Interest tags are user-selected. V0 does not compute reputation (`reputation=0`, `network_score=0`).
+
+Near-term ops target: **30 ELIGIBLE** seed (10 builders / 8 DePIN-node / 5 infra / 4 early adopters / 3 founders). 1000 is stretch HOLD.
+
+UI: `http://127.0.0.1:3000/early-humans`. Pool dump: `/pool`, `/api/pilot/pool`, `/api/pilot/pool.txt`, or `npm run pilot:pool`. CLI:
 
 ```bash
 npm run pilot:intake-human -- --file packages/pilot/fixtures/humans/hum_pilot_ada.intake.json
@@ -78,7 +89,7 @@ npm run pilot:intake-human -- --file packages/pilot/fixtures/humans/hum_pilot_ad
 
 Persists the frozen `HumanProfile` (strict G1 — no extra fields) plus a **consent sidecar**. Humans without a sidecar are refused at match load.
 
-V0 stub scores (intake defaults, **not** match-weight changes): `human_confidence=0.45`, `reputation=0.2`, `network_score=0.2`, `risk_flags=[]`.
+V0 does **not** fabricate reputation: `human_confidence=0`, `reputation=0`, `network_score=0`, `risk_flags=[]` (unscored stub; match is interest-fit). No scraped X users are imported into the pool.
 
 ## 3. Generic pilot runner
 
@@ -109,6 +120,7 @@ On-chain `demo:prepare` stays the Aurora golden-path script (needs the demo proj
 npm run build
 npm test                 # includes @odp/pilot + existing Aurora demo-data tests
 npm run pilot:smoke      # (a) Helios × synthetic opt-in humans  (b) Aurora Maya>Dan>Sib
+npm run pilot:pool       # ELIGIBLE count for ops
 ```
 
 (a) `prj_helios_mesh` is not Aurora; humans are `hum_pilot_*` with consent.

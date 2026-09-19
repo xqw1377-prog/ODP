@@ -5,4 +5,5 @@ export * from "./paths.js";
 export * from "./project-intake.js";
 export * from "./human-intake.js";
 export * from "./persist.js";
+export * from "./pool.js";
 export * from "./runner.js";

@@ -68,9 +68,16 @@ describe("demo server smoke", () => {
     assert.ok((await res.text()).includes("Open Distribution Protocol"));
     const tags = await (await fetch(`http://127.0.0.1:${p}/api/pilot/tags`)).json() as {
       slogan: string;
+      sub: string;
       tags: Array<{ slug: string }>;
     };
     assert.equal(tags.slogan, "Stop hunting. Get discovered.");
+    assert.match(tags.sub, /Connect your X and Solana wallet/);
     assert.equal(tags.tags.length, 10);
+    const poolRes = await fetch(`http://127.0.0.1:${p}/api/pilot/pool`);
+    assert.equal(poolRes.status, 200);
+    const pool = (await poolRes.json()) as { target: number; stretch_hold: number };
+    assert.equal(pool.target, 30);
+    assert.equal(pool.stretch_hold, 1000);
   });
 });

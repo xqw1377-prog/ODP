@@ -5,8 +5,8 @@ import type { HumanProfile } from "@odp/domain";
 import { PassportEngine, ValidatedJsonStore } from "@odp/passport-engine";
 import { loadHumanProfiles, loadMatchIntent, ProjectMatchIntentSchema } from "@odp/matching-engine";
 import type { ProjectMatchIntent } from "@odp/matching-engine";
-import type { HumanConsentRecord, HumanIntakeResult } from "./human-intake.js";
-import { HumanConsentRecordSchema } from "./human-intake.js";
+import type { HumanConsentRecord, HumanIntakeResult, ReviewFlag } from "./human-intake.js";
+import { HumanConsentRecordSchema, isEligibleConsent } from "./human-intake.js";
 import type { ProjectIntakeResult } from "./project-intake.js";
 import { consentsDir, getPilotDataDir, humansDir, intentsDir } from "./paths.js";
 
@@ -39,33 +39,46 @@ function consentStore(dataDir: string): ValidatedJsonStore<HumanConsentRecord> {
   return new ValidatedJsonStore(consentsDir(dataDir), HumanConsentRecordSchema, (c) => c.human_id);
 }
 
-export function persistHumanIntake(result: HumanIntakeResult, dataDir = getPilotDataDir()): HumanProfile {
-  const humans = humanStore(dataDir);
-  const consents = consentStore(dataDir);
-
-  for (const existing of humans.list()) {
-    if (existing.wallet === result.profile.wallet && existing.human_id !== result.profile.human_id) {
-      throw new Error(
-        `wallet ${result.profile.wallet} is already bound to ${existing.human_id} — wallets must be unique`,
-      );
-    }
-  }
-
-  humans.save(result.profile);
-  consents.save(result.consent);
-  return result.profile;
+export function listConsentRecords(dataDir = getPilotDataDir()): HumanConsentRecord[] {
+  return consentStore(dataDir).list();
 }
 
+function reviewFlagsFor(profile: HumanProfile, others: HumanProfile[]): ReviewFlag[] {
+  const flags: ReviewFlag[] = [];
+  if (others.some((h) => h.wallet === profile.wallet && h.human_id !== profile.human_id)) {
+    flags.push("MULTI_WALLET");
+  }
+  if (others.some((h) => h.x_id === profile.x_id && h.human_id !== profile.human_id)) {
+    flags.push("MULTI_X");
+  }
+  return flags;
+}
+
+export function persistHumanIntake(result: HumanIntakeResult, dataDir = getPilotDataDir()): HumanIntakeResult {
+  const humans = humanStore(dataDir);
+  const consents = consentStore(dataDir);
+  const flags = reviewFlagsFor(result.profile, humans.list());
+  const consent = HumanConsentRecordSchema.parse({
+    ...result.consent,
+    review_flags: flags,
+    funnel_stage: flags.length === 0 ? "ELIGIBLE_HUMAN" : "WALLET_BOUND",
+  });
+
+  humans.save(result.profile);
+  consents.save(consent);
+  return { profile: result.profile, consent };
+}
+
+/** Match pool = ELIGIBLE humans only (consent + complete + no review flags). */
 export function loadOptInHumans(dataDir = getPilotDataDir()): HumanProfile[] {
-  const consents = new Map(consentStore(dataDir).list().map((c) => [c.human_id, c]));
-  const profiles = loadHumanProfiles(humansDir(dataDir));
+  const consents = new Map(listConsentRecords(dataDir).map((c) => [c.human_id, c]));
   const opted: HumanProfile[] = [];
-  for (const profile of profiles) {
+  for (const profile of loadHumanProfiles(humansDir(dataDir))) {
     const consent = consents.get(profile.human_id);
-    if (consent === undefined || consent.opted_in !== true) {
+    if (consent === undefined) {
       throw new Error(`human ${profile.human_id} has no opt-in consent record — refuse to load into matching`);
     }
-    opted.push(profile);
+    if (isEligibleConsent(consent)) opted.push(profile);
   }
   return opted;
 }

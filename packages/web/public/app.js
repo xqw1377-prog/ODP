@@ -338,21 +338,44 @@ async function route() {
     if (path === "/distribution/aurora") return await renderDistribution();
     if (path === "/claim/maya") { await prefetchIds(); return await renderClaim(); }
     if (path === "/early-humans") return await renderEarlyHumans();
+    if (path === "/pool") return await renderPool();
     app.innerHTML = `<h1>Not found</h1><a class="link" href="/radar">← Radar</a>`;
   } catch (err) {
     app.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
   }
 }
 
+async function renderPool() {
+  for (const el of steps.querySelectorAll("span")) el.className = "";
+  badge.hidden = true;
+  const pool = await api("/api/pilot/pool");
+  app.innerHTML = `
+    <section class="hero">
+      <div class="kicker" style="margin-top:0">EARLY HUMANS POOL</div>
+      <h1 class="mega rise">${esc(pool.slogan).replace("Get discovered.", "<em>Get discovered.</em>")}</h1>
+      <p class="hero-sub">ELIGIBLE ${pool.eligible} / ${pool.target} seed. 1000 stretch is HOLD.</p>
+    </section>
+    <div class="panel" style="max-width:640px;margin:28px auto 0">
+      <div class="strip-label">ELIGIBLE HUMANS ONLY — MATCH POOL</div>
+      ${pool.humans.length === 0 ? `<p class="small-note">No ELIGIBLE humans yet. <a class="link" href="/early-humans">Enter</a></p>` : pool.humans.map((h) => `
+        <div class="strip-row">
+          <div class="who"><b>${esc(h.human_id)}</b><span class="mono">${esc(h.x_id)}</span></div>
+          <span class="badge ALLOW">${esc(h.funnel_stage)}</span>
+          <div class="why">${h.interest_tags.map(esc).join(" · ")}</div>
+        </div>`).join("")}
+      <p class="small-note">Dump: <a class="link" href="/api/pilot/pool.txt">/api/pilot/pool.txt</a> · <code>npm run pilot:pool</code></p>
+    </div>`;
+}
+
 async function renderEarlyHumans() {
   for (const el of steps.querySelectorAll("span")) el.className = "";
   badge.hidden = true;
-  const { slogan, tags } = await api("/api/pilot/tags");
+  const { slogan, sub, tags } = await api("/api/pilot/tags");
   app.innerHTML = `
     <section class="hero">
       <div class="kicker" style="margin-top:0">ODP EARLY HUMANS V0</div>
       <h1 class="mega rise">${esc(slogan).replace("Get discovered.", "<em>Get discovered.</em>")}</h1>
-      <p class="hero-sub rise" style="animation-delay:.12s">Opt in with a stub X handle, a Solana wallet, and 3–5 interests. Projects discover you through the existing matching engine — no hunting.</p>
+      <p class="hero-sub rise" style="animation-delay:.12s">${esc(sub)}</p>
     </section>
     <form class="intake panel rise" id="early-form" style="animation-delay:.2s">
       <label>Connect X <span class="muted">(stub — placeholder handle, upgradable to OAuth)</span>
@@ -389,12 +412,13 @@ async function renderEarlyHumans() {
           consent: form.consent.checked,
         }),
       });
-      status.innerHTML = `<div class="panel" style="margin-top:18px"><div class="strip-label">YOU'RE IN THE OPT-IN POOL</div>
+      status.innerHTML = `<div class="panel" style="margin-top:18px"><div class="strip-label">${result.eligible ? "ELIGIBLE HUMAN" : "IN REVIEW"}</div>
         <div class="kv" style="margin-top:12px">
           <div class="k">Human</div><div class="mono">${esc(result.human_id)}</div>
           <div class="k">X</div><div>${esc(result.x_id)} <span class="muted">(${esc(result.x_source)})</span></div>
           <div class="k">Wallet</div><div class="mono">${esc(result.wallet)}</div>
           <div class="k">Tags</div><div>${result.interest_tags.map(esc).join(" · ")}</div>
+          <div class="k">Funnel</div><div>${esc(result.funnel_stage)}</div>
         </div></div>`;
     } catch (err) {
       status.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;

@@ -18,6 +18,7 @@
     "intake-project": "tsx scripts/intake-project.ts",
     "intake-human": "tsx scripts/intake-human.ts",
     "run": "tsx scripts/run.ts",
+    "pool": "tsx scripts/pool.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {

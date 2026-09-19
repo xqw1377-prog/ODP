@@ -6,17 +6,49 @@ import { normalizeTag } from "./tags.js";
 import { assertSolanaPubkey } from "./wallet.js";
 
 /**
- * Conservative V0 scores for stub-X opt-in humans.
- * Matching still uses MATCH_WEIGHTS in matching-engine — these are intake
- * defaults, not a formula change. Stub X is unverified.
+ * V0 does not compute reputation or network. HumanProfile requires the
+ * numeric fields (frozen G1), so they are stored as zero = unscored.
+ * Matching still uses MATCH_WEIGHTS; these are not invented ratings.
  */
-export const EARLY_HUMAN_V0_STUB_SCORES = {
-  human_confidence: 0.45,
-  reputation: 0.2,
-  network_score: 0.2,
+export const EARLY_HUMAN_V0_UNSCORED = {
+  human_confidence: 0,
+  reputation: 0,
+  network_score: 0,
 } as const;
 
+/** @deprecated alias — same unscored zeros; do not treat as measured scores */
+export const EARLY_HUMAN_V0_STUB_SCORES = EARLY_HUMAN_V0_UNSCORED;
+
 export const SLOGAN = "Stop hunting. Get discovered.";
+export const LANDING_SUB =
+  "Connect your X and Solana wallet. Tell ODP what you care about. Qualified crypto projects can find you when there's a real match.";
+
+export const FUNNEL_STAGES = [
+  "DISCOVERED",
+  "INVITED",
+  "LANDING",
+  "X_CONNECTED",
+  "WALLET_BOUND",
+  "CONSENTED",
+  "INTERESTS_COMPLETED",
+  "ELIGIBLE_HUMAN",
+  "MATCHED",
+  "CLAIMED",
+] as const;
+export type FunnelStage = (typeof FUNNEL_STAGES)[number];
+
+export const REVIEW_FLAGS = ["MULTI_WALLET", "MULTI_X"] as const;
+export type ReviewFlag = (typeof REVIEW_FLAGS)[number];
+
+export const POOL_SEED_TARGET = 30;
+export const POOL_STRETCH_HOLD = 1000;
+export const POOL_COMPOSITION_TARGET = {
+  builders: 10,
+  depin_node: 8,
+  infra: 5,
+  early_adopters: 4,
+  founders: 3,
+} as const;
 
 export interface XIdentitySource {
   readonly kind: "stub" | "x_oauth";
@@ -65,6 +97,8 @@ export const HumanConsentRecordSchema = z
     x_source: z.enum(["stub", "x_oauth"]),
     x_stub_acknowledged: z.literal(true),
     slogan: z.literal(SLOGAN),
+    funnel_stage: z.enum(FUNNEL_STAGES),
+    review_flags: z.array(z.enum(REVIEW_FLAGS)).default([]),
   })
   .strict();
 export type HumanConsentRecord = z.infer<typeof HumanConsentRecordSchema>;
@@ -74,9 +108,14 @@ export interface HumanIntakeResult {
   consent: HumanConsentRecord;
 }
 
+export function isEligibleConsent(consent: HumanConsentRecord): boolean {
+  return consent.opted_in === true && consent.funnel_stage === "ELIGIBLE_HUMAN" && consent.review_flags.length === 0;
+}
+
 /**
  * Persistable Early Humans V0 input → frozen HumanProfile.
- * Consent is enforced here; it cannot be stored on HumanProfile (strict G1).
+ * Consent / funnel live in the sidecar (HumanProfile is strict G1).
+ * Tags are user-selected only. Reputation is not computed.
  */
 export function intakeHuman(input: unknown, source: XIdentitySource = resolveXIdentitySource()): HumanIntakeResult {
   const body = HumanIntakeSchema.parse(input);
@@ -95,7 +134,7 @@ export function intakeHuman(input: unknown, source: XIdentitySource = resolveXId
     human_id,
     x_id: connected.x_id,
     wallet: assertSolanaPubkey(body.wallet),
-    ...EARLY_HUMAN_V0_STUB_SCORES,
+    ...EARLY_HUMAN_V0_UNSCORED,
     interest_tags: tags,
     risk_flags: [],
   });
@@ -107,6 +146,8 @@ export function intakeHuman(input: unknown, source: XIdentitySource = resolveXId
     x_source: source.kind,
     x_stub_acknowledged: true,
     slogan: SLOGAN,
+    funnel_stage: "ELIGIBLE_HUMAN",
+    review_flags: [],
   });
 
   return { profile, consent };

@@ -6,6 +6,7 @@ import { computeDemoSnapshot, mayaWhyYou, HUMAN_DISPLAY, loadDemoState } from ".
 import { executeMayaClaim, readMayaClaimStatus } from "./claim.js";
 import {
   EARLY_HUMAN_TAGS,
+  LANDING_SUB,
   SLOGAN,
   getPilotDataDir,
   intakeHuman,
@@ -15,6 +16,8 @@ import {
   persistProjectIntake,
   openPassportEngine,
   loadPersistedIntent,
+  readPilotPool,
+  formatPoolDump,
 } from "@odp/pilot";
 
 /**
@@ -25,7 +28,7 @@ import {
 
 const PORT = Number(process.env.ODP_PORT ?? 3000);
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../public");
-const ROUTES = new Set(["/radar", "/project/aurora", "/distribution/aurora", "/claim/maya", "/early-humans"]);
+const ROUTES = new Set(["/radar", "/project/aurora", "/distribution/aurora", "/claim/maya", "/early-humans", "/pool"]);
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -108,13 +111,26 @@ export function createDemoServer() {
       }
 
       if (url === "/api/pilot/tags") {
-        return json(res, 200, { slogan: SLOGAN, tags: EARLY_HUMAN_TAGS });
+        return json(res, 200, { slogan: SLOGAN, sub: LANDING_SUB, tags: EARLY_HUMAN_TAGS });
+      }
+
+      if (url === "/api/pilot/pool") {
+        const pool = readPilotPool(getPilotDataDir());
+        return json(res, 200, pool);
+      }
+
+      if (url === "/api/pilot/pool.txt") {
+        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+        return res.end(formatPoolDump(readPilotPool(getPilotDataDir())));
       }
 
       if (url === "/api/pilot/humans" && req.method === "GET") {
+        const pool = readPilotPool(getPilotDataDir());
         const humans = loadOptInHumans(getPilotDataDir());
         return json(res, 200, {
           slogan: SLOGAN,
+          eligible: pool.eligible,
+          target: pool.target,
           humans: humans.map((h) => ({
             human_id: h.human_id,
             x_id: h.x_id,
@@ -126,8 +142,7 @@ export function createDemoServer() {
 
       if (url === "/api/pilot/humans" && req.method === "POST") {
         const body = JSON.parse((await readBody(req)) || "{}");
-        const taken = intakeHuman(body);
-        persistHumanIntake(taken, getPilotDataDir());
+        const taken = persistHumanIntake(intakeHuman(body), getPilotDataDir());
         return json(res, 200, {
           slogan: SLOGAN,
           human_id: taken.profile.human_id,
@@ -135,6 +150,9 @@ export function createDemoServer() {
           wallet: taken.profile.wallet,
           interest_tags: taken.profile.interest_tags,
           x_source: taken.consent.x_source,
+          funnel_stage: taken.consent.funnel_stage,
+          review_flags: taken.consent.review_flags,
+          eligible: taken.consent.funnel_stage === "ELIGIBLE_HUMAN" && taken.consent.review_flags.length === 0,
         });
       }
 

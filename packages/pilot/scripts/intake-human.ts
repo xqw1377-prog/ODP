@@ -10,12 +10,12 @@ import { flag, requireFlag } from "../src/cli.js";
  */
 const file = requireFlag("--file");
 const dataDir = getPilotDataDir(flag("--data-dir"));
-const result = intakeHuman(JSON.parse(readFileSync(file, "utf8")));
-persistHumanIntake(result, dataDir);
+const taken = persistHumanIntake(intakeHuman(JSON.parse(readFileSync(file, "utf8"))), dataDir);
 
-console.log(`human_id: ${result.profile.human_id}`);
-console.log(`x_id:     ${result.profile.x_id} (stub, unverified)`);
-console.log(`wallet:   ${result.profile.wallet}`);
-console.log(`tags:     ${result.profile.interest_tags.join(", ")}`);
-console.log(`consent:  opted in at ${result.consent.opted_in_at}`);
+console.log(`human_id: ${taken.profile.human_id}`);
+console.log(`x_id:     ${taken.profile.x_id} (stub, unverified)`);
+console.log(`wallet:   ${taken.profile.wallet}`);
+console.log(`tags:     ${taken.profile.interest_tags.join(", ")}`);
+console.log(`funnel:   ${taken.consent.funnel_stage}`);
+console.log(`review:   ${taken.consent.review_flags.join(",") || "(none)"}`);
 console.log(`data_dir: ${dataDir}`);

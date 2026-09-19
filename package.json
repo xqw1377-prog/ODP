@@ -16,6 +16,7 @@
     "pilot:intake-project": "npm run intake-project -w @odp/pilot --",
     "pilot:intake-human": "npm run intake-human -w @odp/pilot --",
     "pilot:run": "npm run run -w @odp/pilot --",
+    "pilot:pool": "npm run pool -w @odp/pilot --",
     "pilot:smoke": "npm run smoke -w @odp/pilot"
   },
   "devDependencies": {
