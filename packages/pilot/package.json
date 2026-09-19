@@ -1,0 +1,32 @@
+{
+  "name": "@odp/pilot",
+  "version": "0.1.0",
+  "description": "ODP P1 Real Evidence: non-custodial human/project intake, generic pilot runner, evidence ledger. Frozen engines are imported, never modified.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "dev": "tsx src/server.ts",
+    "pilot:prepare": "tsx scripts/pilot-prepare.ts",
+    "pilot:evidence": "tsx scripts/pilot-evidence.ts",
+    "pilot:fixture-humans": "tsx scripts/fixture-humans.ts"
+  },
+  "dependencies": {
+    "@odp/domain": "*",
+    "@odp/passport-engine": "*",
+    "@odp/matching-engine": "*",
+    "@odp/distribution-engine": "*",
+    "@solana/web3.js": "^1.99.0",
+    "tweetnacl": "^1.0.3",
+    "zod": "^4.0.0"
+  }
+}
