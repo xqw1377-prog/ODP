@@ -107,6 +107,8 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 `vercel.json` 已写入同样的 install/build。入口是仓库根 `server.ts`:调用 `createDemoServer()` 并 `listen(process.env.PORT, "0.0.0.0")`,Vercel Node runtime 靠 `listen()` 捕获请求。本地 `npm run dev` 仍走 `packages/web` 的 `tsx src/server.ts`,默认绑 `127.0.0.1:3000`。
 
+如果仪表盘仍把 Root Directory 留在 `packages/web`,该目录下的 `vercel.json` 会 `cd ../.. && npm install` / `npm run build`,避免再次只编译 `@odp/web`。优先还是把 Root 改回仓库根。
+
 部署后公开路径:`/early-humans`(口号必须是 `Stop hunting. Get discovered.`)、`/api/pilot/tags`、`POST /api/pilot/humans`。
 
 环境变量(Settings → Environment Variables, Production + Preview):

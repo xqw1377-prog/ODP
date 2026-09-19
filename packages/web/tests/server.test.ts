@@ -103,7 +103,7 @@ describe("demo server smoke", { concurrency: false }, () => {
       assert.equal(res.status, 200);
       const body = (await res.json()) as { slogan: string; x_id: string; eligible: boolean };
       assert.equal(body.slogan, "Stop hunting. Get discovered.");
-      assert.equal(body.x_id, "vercel_pilot");
+      assert.equal(body.x_id, "@vercel_pilot");
       assert.equal(body.eligible, true);
     } finally {
       if (prev === undefined) delete process.env.ODP_PILOT_DATA_DIR;
