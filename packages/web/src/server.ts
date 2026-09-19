@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,11 +24,40 @@ import {
  * ODP demo server (P0-5). Serves the 4-scene UI and a small JSON API backed
  * by the REAL pipelines. Claim signing happens HERE (demo wallet mode) —
  * private keys never reach the browser.
+ *
+ * Vercel: repo-root `server.ts` exports listenDemoServer(createDemoServer()).
+ * Local: `npm run dev` → tsx this file → 127.0.0.1:ODP_PORT.
  */
 
-const PORT = Number(process.env.ODP_PORT ?? 3000);
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../public");
 const ROUTES = new Set(["/radar", "/project/aurora", "/distribution/aurora", "/claim/maya", "/early-humans", "/pool"]);
+
+/** Vercel / PaaS inject PORT. Local `npm run dev` keeps 127.0.0.1:ODP_PORT. */
+export function resolveListenPort(): number {
+  return Number(process.env.PORT ?? process.env.ODP_PORT ?? 3000);
+}
+
+export function resolveListenHost(): string {
+  if (process.env.ODP_LISTEN_HOST) return process.env.ODP_LISTEN_HOST;
+  if (process.env.VERCEL || process.env.PORT) return "0.0.0.0";
+  return "127.0.0.1";
+}
+
+export function listenDemoServer(server: Server): Server {
+  const port = resolveListenPort();
+  const host = resolveListenHost();
+  server.listen(port, host, () => {
+    const shown = host === "0.0.0.0" ? "127.0.0.1" : host;
+    console.log(`ODP demo: http://${shown}:${port}/radar`);
+  });
+  return server;
+}
+
+function isDirectServerEntry(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return path.resolve(entry) === fileURLToPath(import.meta.url);
+}
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -218,9 +247,6 @@ export function createDemoServer() {
   });
 }
 
-if (process.argv[1]?.endsWith("server.ts")) {
-  const server = createDemoServer();
-  server.listen(PORT, "127.0.0.1", () => {
-    console.log(`ODP demo: http://127.0.0.1:${PORT}/radar`);
-  });
+if (isDirectServerEntry()) {
+  listenDemoServer(createDemoServer());
 }

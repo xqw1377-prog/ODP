@@ -89,6 +89,35 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 真实试点登机门(不改引擎、不绑死 Aurora)见 [docs/pilot-enablement-p0.md](docs/pilot-enablement-p0.md):`npm run pilot:smoke`,网页 `/early-humans`。
 
+## Vercel (`odp.mealkey.cn`)
+
+`packages/web` 是自定义 `node:http` 演示服务器,不是 Next.js。Vercel 项目 **Root Directory 必须是仓库根**(不要设成 `packages/web`)。上次失败部署 (`dpl_7SG4D2N3YmK6AiWh5gQqmaKDG8Gj`) 就是在 `packages/web` 里跑了 `npm run build`/`tsc`,此时 sibling workspace(`@odp/pilot` 等)还没有 dist。
+
+在 Vercel Project Settings → General 填:
+
+| Setting | Value |
+|---|---|
+| **Framework Preset** | Other / Node.js (`node`) |
+| **Root Directory** | `.` (repository root, empty) |
+| **Include files outside Root Directory** | on (default when Root = `.`) |
+| **Install Command** | `npm install` |
+| **Build Command** | `npm run build` |
+| **Output Directory** | *leave empty* (not a static site) |
+| **Node.js Version** | 20.x or 24.x |
+
+`vercel.json` 已写入同样的 install/build。入口是仓库根 `server.ts`:调用 `createDemoServer()` 并 `listen(process.env.PORT, "0.0.0.0")`,Vercel Node runtime 靠 `listen()` 捕获请求。本地 `npm run dev` 仍走 `packages/web` 的 `tsx src/server.ts`,默认绑 `127.0.0.1:3000`。
+
+部署后公开路径:`/early-humans`(口号必须是 `Stop hunting. Get discovered.`)、`/api/pilot/tags`、`POST /api/pilot/humans`。
+
+环境变量(Settings → Environment Variables, Production + Preview):
+
+| Name | Value | Notes |
+|---|---|---|
+| `ODP_PILOT_DATA_DIR` | `/tmp/odp-pilot` | 试点 intake 可写目录。Vercel 除 `/tmp` 外只读;不设时 `VERCEL=1` 也会落到 `/tmp/odp-pilot`。**实例间不持久**,仅演示可靠。 |
+| `ODP_PILOT_DIR` | (optional alias) | 旧名,次于 `ODP_PILOT_DATA_DIR` |
+
+不要改 Passport / Matching / Merkle / Anchor / claim 规则。Aurora 四场景 UI 行为不变;公开 Early Humans 只依赖上述入口与可写 `/tmp`。
+
 ## P0 门禁状态
 
 证据状态只使用开工令第八节规定的词汇,不使用 DONE / READY 之类措辞。

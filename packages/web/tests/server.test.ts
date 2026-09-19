@@ -1,10 +1,12 @@
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDemoServer } from "../src/server.js";
+import path from "node:path";
+import { tmpdir } from "node:os";
+import { createDemoServer, resolveListenHost, resolveListenPort } from "../src/server.js";
 
 /** Smoke: the demo server serves the 4 routes and real-pipeline API data. */
 
-describe("demo server smoke", () => {
+describe("demo server smoke", { concurrency: false }, () => {
   const server = createDemoServer();
   const listening = new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = new Promise<number>((resolve) =>
@@ -80,4 +82,63 @@ describe("demo server smoke", () => {
     assert.equal(pool.target, 30);
     assert.equal(pool.stretch_hold, 1000);
   });
+
+  it("POST /api/pilot/humans persists into ODP_PILOT_DATA_DIR", async () => {
+    const prev = process.env.ODP_PILOT_DATA_DIR;
+    const dataDir = path.join(tmpdir(), `odp-web-pilot-${process.pid}-${Date.now()}`);
+    process.env.ODP_PILOT_DATA_DIR = dataDir;
+    try {
+      const p = await port;
+      const res = await fetch(`http://127.0.0.1:${p}/api/pilot/humans`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          x_handle: "@vercel_pilot",
+          wallet: "7ZBKhXPypo5nW7F8oCdmEgK8zAcbGSm1X4GEtnhzUHhp",
+          interest_tags: ["Solana", "DePIN", "Early Adopter"],
+          x_stub_acknowledged: true,
+          consent: true,
+        }),
+      });
+      assert.equal(res.status, 200);
+      const body = (await res.json()) as { slogan: string; x_id: string; eligible: boolean };
+      assert.equal(body.slogan, "Stop hunting. Get discovered.");
+      assert.equal(body.x_id, "vercel_pilot");
+      assert.equal(body.eligible, true);
+    } finally {
+      if (prev === undefined) delete process.env.ODP_PILOT_DATA_DIR;
+      else process.env.ODP_PILOT_DATA_DIR = prev;
+    }
+  });
 });
+
+describe("Vercel listen helpers", { concurrency: false }, () => {
+  const keys = ["PORT", "ODP_PORT", "VERCEL", "ODP_LISTEN_HOST"] as const;
+  const prev = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+
+  after(() => {
+    for (const key of keys) {
+      if (prev[key] === undefined) delete process.env[key];
+      else process.env[key] = prev[key];
+    }
+  });
+
+  it("binds 0.0.0.0 when PORT or VERCEL is set, else 127.0.0.1", () => {
+    delete process.env.PORT;
+    delete process.env.VERCEL;
+    delete process.env.ODP_LISTEN_HOST;
+    assert.equal(resolveListenHost(), "127.0.0.1");
+    process.env.PORT = "3000";
+    assert.equal(resolveListenHost(), "0.0.0.0");
+    delete process.env.PORT;
+    process.env.VERCEL = "1";
+    assert.equal(resolveListenHost(), "0.0.0.0");
+  });
+
+  it("prefers process.env.PORT over ODP_PORT", () => {
+    process.env.PORT = "8080";
+    process.env.ODP_PORT = "3000";
+    assert.equal(resolveListenPort(), 8080);
+  });
+});
+

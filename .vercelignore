@@ -1,0 +1,5 @@
+programs/
+docs/screenshots/
+**/.odp/**
+**/target/
+**/*.tsbuildinfo

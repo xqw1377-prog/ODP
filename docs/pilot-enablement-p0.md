@@ -81,7 +81,7 @@ Funnel (sidecar, not HumanProfile):
 
 Near-term ops target: **30 ELIGIBLE** seed (10 builders / 8 DePIN-node / 5 infra / 4 early adopters / 3 founders). 1000 is stretch HOLD.
 
-UI: `http://127.0.0.1:3000/early-humans`. Pool dump: `/pool`, `/api/pilot/pool`, `/api/pilot/pool.txt`, or `npm run pilot:pool`. CLI:
+UI: `http://127.0.0.1:3000/early-humans` (local) or `https://odp.mealkey.cn/early-humans` (Vercel). Pool dump: `/pool`, `/api/pilot/pool`, `/api/pilot/pool.txt`, or `npm run pilot:pool`. CLI:
 
 ```bash
 npm run pilot:intake-human -- --file packages/pilot/fixtures/humans/hum_pilot_ada.intake.json
@@ -112,7 +112,9 @@ On-chain `demo:prepare` stays the Aurora golden-path script (needs the demo proj
 
 ## Data dir
 
-`ODP_PILOT_DIR` → else `${ODP_DATA_DIR}/pilot` → else `<repo>/.odp/pilot` (gitignored).
+`ODP_PILOT_DATA_DIR` → else `ODP_PILOT_DIR` → else `${ODP_DATA_DIR}/pilot` → else `/tmp/odp-pilot` when `VERCEL=1` → else `<repo>/.odp/pilot` (gitignored).
+
+On Vercel the function filesystem is read-only except `/tmp`. Set `ODP_PILOT_DATA_DIR=/tmp/odp-pilot` (or rely on the `VERCEL=1` default). That directory is **ephemeral** and not shared across instances — demo reliability only, not durable storage.
 
 ## Prove it
 

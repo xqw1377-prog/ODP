@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "node",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "functions": {
+    "server.ts": {
+      "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}"
+    }
+  }
+}
