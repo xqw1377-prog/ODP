@@ -111,7 +111,7 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 如果仪表盘仍把 Root Directory 留在 `packages/web`,该目录下的 `vercel.json` / `api/index.ts` 同样走函数 + rewrite,并 `cd ../..` 安装/编译。
 
-公开 `/early-humans` 现为 **OPENING SOON** 静态页(口号不变)。**PUBLIC INTAKE = HOLD**：`POST /api/pilot/humans` 返回 403，不落盘；`/api/pilot/pool` 与 `/api/pilot/pool.txt` 返回 410，不导出 handle/wallet。`.vercelignore` 与 `functions.excludeFiles` 排除 `.odp/` / `devnet-keys` / `*.pem`，私钥不进函数包。
+公开 `/early-humans` 现为 **OPENING SOON** 静态页(口号不变,Coming soon / Get notified 仅指向 GitHub,不收集身份)。**PUBLIC INTAKE = HOLD**：`POST /api/pilot/humans` 与 `POST /api/pilot/projects` 返回 403，不落盘；`GET /api/pilot/humans`、`/api/pilot/pool`、`/api/pilot/pool.txt` 返回 410，不导出 handle/wallet，ELIGIBLE 公开计数为 0。Vercel isolate 启动时清空 `/tmp/odp-pilot`。`.vercelignore` 与 `functions.excludeFiles` 排除 `.odp/` / `devnet-keys` / `*.pem`，`includeFiles` 仅 public + fixtures + dist，私钥不进函数包。
 
 环境变量(Settings → Environment Variables, Production + Preview):
 
@@ -120,7 +120,7 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 | `ODP_PILOT_DATA_DIR` | `/tmp/odp-pilot` | 试点 intake 可写目录。Vercel 除 `/tmp` 外只读;不设时 `VERCEL=1` 也会落到 `/tmp/odp-pilot`。**实例间不持久**,仅演示可靠。 |
 | `ODP_PILOT_DIR` | (optional alias) | 旧名,次于 `ODP_PILOT_DATA_DIR` |
 
-不要改 Passport / Matching / Merkle / Anchor / claim 规则。Aurora 四场景 UI 行为不变;公开 Early Humans 只依赖上述入口与可写 `/tmp`。
+不要改 Passport / Matching / Merkle / Anchor / claim 规则。Aurora 四场景 UI 行为不变。公开边不写 `/tmp` 报名数据。
 
 ## P0 门禁状态
 

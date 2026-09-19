@@ -68,6 +68,8 @@ describe("demo server smoke", { concurrency: false }, () => {
     const body = await res.text();
     assert.ok(body.includes("Stop hunting. Get discovered."));
     assert.ok(body.includes("OPENING SOON"));
+    assert.ok(/Coming soon/i.test(body));
+    assert.ok(/Get notified/i.test(body));
     assert.ok(body.includes("https://github.com/xqw1377-prog/ODP"));
     assert.ok(!/name="wallet"|name="consent"|name="x_handle"|<form/i.test(body));
     const footer = await (await fetch(`http://127.0.0.1:${p}/radar`)).text();
@@ -90,6 +92,14 @@ describe("demo server smoke", { concurrency: false }, () => {
     assert.equal(post.status, 403);
     const held = (await post.json()) as { error: string };
     assert.match(held.error, /PUBLIC INTAKE = HOLD/);
+    const projectPost = await fetch(`http://127.0.0.1:${p}/api/pilot/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project_id: "prj_blocked", name: "Blocked" }),
+    });
+    assert.equal(projectPost.status, 403);
+    const projectHeld = (await projectPost.json()) as { error: string };
+    assert.match(projectHeld.error, /PUBLIC INTAKE = HOLD/);
     for (const path of ["/api/pilot/pool", "/api/pilot/pool.txt", "/api/pilot/humans"]) {
       const dump = await fetch(`http://127.0.0.1:${p}${path}`);
       assert.equal(dump.status, 410, path);

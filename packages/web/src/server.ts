@@ -9,8 +9,6 @@ import {
   LANDING_SUB,
   SLOGAN,
   getPilotDataDir,
-  intakeProject,
-  persistProjectIntake,
   openPassportEngine,
   loadPersistedIntent,
 } from "@odp/pilot";
@@ -64,12 +62,6 @@ const MIME: Record<string, string> = {
 function json(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
-}
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  let body = "";
-  for await (const chunk of req) body += chunk as string;
-  return body;
 }
 
 let cachedSnapshot: DemoSnapshot | null = null;
@@ -201,16 +193,7 @@ export async function handleDemoRequest(req: IncomingMessage, res: ServerRespons
     }
 
     if (url === "/api/pilot/projects" && req.method === "POST") {
-      const body = JSON.parse((await readBody(req)) || "{}");
-      const taken = intakeProject(body);
-      persistProjectIntake(taken, getPilotDataDir());
-      return json(res, 200, {
-        project_id: taken.candidate.project_id,
-        name: taken.candidate.name,
-        passport_status: taken.passport.status,
-        reasons: taken.passport.reasons,
-        intent: taken.intent,
-      });
+      return json(res, 403, { error: PUBLIC_INTAKE_HOLD });
     }
 
     if (url.startsWith("/api/pilot/projects/") && req.method === "GET") {

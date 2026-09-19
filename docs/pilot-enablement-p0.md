@@ -54,7 +54,8 @@ Evidence rules (fail closed):
 
 ```bash
 npm run pilot:intake-project -- --brief packages/pilot/fixtures/briefs/helios.brief.json
-# or: POST /api/pilot/projects  (inline evidence_bundle / pointers)
+# public POST /api/pilot/projects is HOLD (403) until wallet verification
+# local-ops: npm run pilot:intake-project (not the public edge)
 ```
 
 Writes under the pilot data dir: `candidates/`, `passports/` (via `PassportEngine`), `intents/<id>.intent.json`.
@@ -81,7 +82,7 @@ Funnel (sidecar, not HumanProfile):
 
 Near-term ops target: **30 ELIGIBLE** seed (10 builders / 8 DePIN-node / 5 infra / 4 early adopters / 3 founders). 1000 is stretch HOLD.
 
-Public UI `/early-humans` is **OPENING SOON** (Commander: PUBLIC INTAKE = HOLD until wallet-signature verification). No wallet paste, no consent checkbox. Public `/api/pilot/pool*` dumps are 410. CLI `npm run pilot:pool` remains local-ops only.
+Public UI `/early-humans` is **OPENING SOON** (Commander: PUBLIC INTAKE = HOLD until wallet-signature verification). Slogan + short explain + Coming soon / Get notified (GitHub watch only). No wallet paste, no consent checkbox, no identity store. Public `POST /api/pilot/humans`, `POST /api/pilot/projects` are 403. `GET /api/pilot/humans` and `/api/pilot/pool*` dumps are 410 (ELIGIBLE count not published; leftover `/tmp` rows including `hum_vercel_live` are wiped on Vercel boot and never counted). CLI `npm run pilot:pool` remains local-ops only.
 
 ```bash
 npm run pilot:intake-human -- --file packages/pilot/fixtures/humans/hum_pilot_ada.intake.json
@@ -114,7 +115,17 @@ On-chain `demo:prepare` stays the Aurora golden-path script (needs the demo proj
 
 `ODP_PILOT_DATA_DIR` → else `ODP_PILOT_DIR` → else `${ODP_DATA_DIR}/pilot` → else `/tmp/odp-pilot` when `VERCEL=1` → else `<repo>/.odp/pilot` (gitignored).
 
-On Vercel the function filesystem is read-only except `/tmp`. Set `ODP_PILOT_DATA_DIR=/tmp/odp-pilot` (or rely on the `VERCEL=1` default). That directory is **ephemeral** and not shared across instances — demo reliability only, not durable storage.
+On Vercel the function filesystem is read-only except `/tmp`. Set `ODP_PILOT_DATA_DIR=/tmp/odp-pilot` (or rely on the `VERCEL=1` default). Isolates **wipe** that directory on boot so leftover unverified rows (`hum_vercel_live`) never count. Public edge does **not** write registration data.
+
+## Keys must never ship in the Function bundle
+
+Confirmation (grep + ignore files):
+
+- `.gitignore` already lists `.odp/`
+- `.vercelignore` lists `**/.odp/**`, `.odp/`, `.odp/devnet-keys/`, `**/*.pem`, `**/*secret*`
+- `vercel.json` `includeFiles` is only `packages/web/public/**`, engine/pilot fixtures, and `packages/*/dist/**` — never `.odp` or `devnet-keys`
+- `functions.excludeFiles` repeats `{**/.odp/**,**/.odp/devnet-keys/**,**/*devnet-keys*,**/*.pem}`
+- Claim reads `.odp/devnet-keys` at **local runtime only**; those files are not in git and are not in the Vercel Function bundle
 
 ## Prove it
 
