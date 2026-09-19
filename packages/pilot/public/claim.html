@@ -48,7 +48,8 @@
         document.getElementById("amount").innerHTML = `${PILOT.esc(statusRes.amount)} <span>TOKENS</span>`;
         document.getElementById("detail").textContent = `matched allocation for ${pubkey}`;
       } catch (err) {
-        status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+        const msg = err && err.message ? err.message : String(err);
+        status.innerHTML = `<div class="error-box">${PILOT.esc(msg)}</div>`;
       }
     });
 

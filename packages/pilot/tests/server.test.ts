@@ -58,6 +58,21 @@ test("pages serve: intake landing carries the slogan, no wallet collection pre-v
   assert.match(html, /Stop hunting/);
 });
 
+test("enroll client prefers Phantom namespace and never blindly uses window.solana", async () => {
+  const jsRes = await fetch(`${base}/pilot-app.js`);
+  const js = await jsRes.text();
+  assert.equal(jsRes.status, 200);
+  assert.match(js, /win\?\.phantom\?\.solana/);
+  assert.match(js, /isPhantom === true/);
+  assert.match(js, /Install\/unlock Phantom/);
+  assert.match(js, /\[ODP wallet\]/);
+  assert.doesNotMatch(js, /\?\? window\.solana \?\? null/);
+
+  const html = await (await fetch(`${base}/`)).text();
+  assert.match(html, /Connect Phantom/);
+  assert.match(html, /PILOT\.PHANTOM_MISSING/);
+});
+
 test("wallet ownership: challenge → signature → 201 ELIGIBLE; replay → 400", async () => {
   const { res } = await pilotFlow(base);
   assert.equal(res.status, 201);
