@@ -17,3 +17,4 @@ target/
 # os
 .DS_Store
 Thumbs.db
+.zcode/
