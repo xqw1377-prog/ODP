@@ -22,6 +22,7 @@
       Real projects match against the frozen engine — you never chase airdrops again.</p>
 
     <section class="panel" id="enroll-panel">
+      <div id="wallet-banner" class="small-note">checking this browser for a Solana wallet…</div>
       <div class="kicker">ENROLLMENT — 3 STEPS</div>
       <ol class="steps">
         <li>Connect your Solana wallet (Phantom / Solflare)</li>
@@ -52,6 +53,24 @@
   <script src="/pilot-app.js"></script>
   <script>
     let walletPubkey = null;
+
+    // wallet detection banner: says plainly whether THIS browser surface has
+    // Phantom (embedded/in-app browsers have no extensions at all)
+    (function () {
+      const banner = document.getElementById("wallet-banner");
+      let ticks = 0;
+      const check = setInterval(() => {
+        ticks += 1;
+        const p = PILOT.provider();
+        if (p) {
+          banner.innerHTML = '<span class="ok">✓ Solana wallet detected in this browser — ready to sign.</span>';
+          clearInterval(check);
+        } else if (ticks > 10) {
+          banner.innerHTML = '<span class="bad">✗ No Solana wallet in THIS browser.</span> You are likely in an embedded/in-app browser — open <b>http://127.0.0.1:3200/</b> in your normal Chrome window (the one with the Phantom fox icon in the toolbar), then refresh.';
+          clearInterval(check);
+        }
+      }, 1000);
+    })();
 
     PILOT.api("/api/pilot/meta").then((meta) => {
       document.getElementById("tags").innerHTML = meta.vocabulary
