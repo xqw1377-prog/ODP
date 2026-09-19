@@ -97,7 +97,7 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 | Setting | Value |
 |---|---|
-| **Framework Preset** | Other (`null`) — **not** a long-running Node listen server |
+| **Framework Preset** | Node.js (`node`) — Function handler, **not** `listen()` |
 | **Root Directory** | `.` (repository root, empty) |
 | **Include files outside Root Directory** | on (default when Root = `.`) |
 | **Install Command** | `npm install` |
