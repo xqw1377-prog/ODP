@@ -1,10 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "node",
+  "framework": null,
   "installCommand": "npm install",
   "buildCommand": "npm run build",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api?odp_path=$1" }
+  ],
   "functions": {
-    "server.ts": {
+    "api/index.ts": {
       "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}"
     }
   }

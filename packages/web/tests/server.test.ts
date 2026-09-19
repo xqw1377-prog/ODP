@@ -2,7 +2,7 @@ import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { tmpdir } from "node:os";
-import { createDemoServer, resolveListenHost, resolveListenPort } from "../src/server.js";
+import { createDemoServer, handleDemoRequest, requestPath, resolveListenHost, resolveListenPort } from "../src/server.js";
 
 /** Smoke: the demo server serves the 4 routes and real-pipeline API data. */
 
@@ -139,6 +139,13 @@ describe("Vercel listen helpers", { concurrency: false }, () => {
     process.env.PORT = "8080";
     process.env.ODP_PORT = "3000";
     assert.equal(resolveListenPort(), 8080);
+  });
+
+  it("recovers the public path from Vercel rewrite query", () => {
+    assert.equal(requestPath({ url: "/api?odp_path=early-humans" } as never), "/early-humans");
+    assert.equal(requestPath({ url: "/api?odp_path=api/pilot/tags" } as never), "/api/pilot/tags");
+    assert.equal(requestPath({ url: "/api/pilot/tags" } as never), "/api/pilot/tags");
+    assert.equal(typeof handleDemoRequest, "function");
   });
 });
 

@@ -97,7 +97,7 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 | Setting | Value |
 |---|---|
-| **Framework Preset** | Other / Node.js (`node`) |
+| **Framework Preset** | Other (`null`) — **not** a long-running Node listen server |
 | **Root Directory** | `.` (repository root, empty) |
 | **Include files outside Root Directory** | on (default when Root = `.`) |
 | **Install Command** | `npm install` |
@@ -105,9 +105,11 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 | **Output Directory** | *leave empty* (not a static site) |
 | **Node.js Version** | 20.x or 24.x |
 
-`vercel.json` 已写入同样的 install/build。入口是仓库根 `server.ts`:调用 `createDemoServer()` 并 `listen(process.env.PORT, "0.0.0.0")`,Vercel Node runtime 靠 `listen()` 捕获请求。本地 `npm run dev` 仍走 `packages/web` 的 `tsx src/server.ts`,默认绑 `127.0.0.1:3000`。
+`dpl_5zgSfrhw6osYg4AiUFaJvC66ff6x` 构建 READY 但全站 45s 零字节:部署类型是 **LAMBDAS**,根 `server.ts` 的 `listen(PORT)` 在 Lambda 里没有入站 TCP,请求永不 `res.end`。
 
-如果仪表盘仍把 Root Directory 留在 `packages/web`,该目录下的 `vercel.json` 会 `cd ../.. && npm install` / `npm run build`,避免再次只编译 `@odp/web`。优先还是把 Root 改回仓库根。
+正确入口是仓库根 `api/index.ts`:导出 `handleDemoRequest(req, res)`(Vercel Node Function)。`vercel.json` 把 `/(.*)` rewrite 到 `/api?odp_path=$1`。Aurora snapshot / Solana claim **懒加载**,`GET /api/pilot/tags` 与 `/early-humans` 不跑 `computeDemoSnapshot()`。本地 `npm run dev` 仍 `tsx src/server.ts`,绑 `127.0.0.1`。
+
+如果仪表盘仍把 Root Directory 留在 `packages/web`,该目录下的 `vercel.json` / `api/index.ts` 同样走函数 + rewrite,并 `cd ../..` 安装/编译。
 
 部署后公开路径:`/early-humans`(口号必须是 `Stop hunting. Get discovered.`)、`/api/pilot/tags`、`POST /api/pilot/humans`。
 
