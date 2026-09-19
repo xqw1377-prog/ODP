@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ODP Pilot — Operator</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">Open Distribution Protocol</div>
+    <nav>
+      <a class="link" href="/">Early Humans</a>
+      <a class="link" href="/project">Projects</a>
+      <a class="link" href="/claim">Claim</a>
+      <a class="link" href="/console">Operator</a>
+    </nav>
+  </header>
+  <main class="pilot">
+    <h1 class="scene-title">Operator console <em>(gated)</em></h1>
+    <p class="sub">Evidence decisions are the power gate: UNVERIFIED → VERIFIED → Passport.
+      Requires ODP_OPERATOR_TOKEN. Every action is attributed to a verifier.</p>
+    <section class="panel">
+      <label>Operator token <input name="token" type="password" placeholder="ODP_OPERATOR_TOKEN" /></label>
+      <label>Project id <input name="project_id" placeholder="prj_…" spellcheck="false" /></label>
+      <button class="cta ghost" id="load">Load claims</button>
+      <div id="claims"></div>
+      <button class="cta ghost" id="passport">Generate passport (derived)</button>
+      <div id="passportout" class="small-note"></div>
+      <div class="kicker" style="margin-top:22px">PLAN A RUN</div>
+      <label>Total amount <input name="total" placeholder="3000" /></label>
+      <label>Recipient count <input name="recipients" placeholder="3" /></label>
+      <button class="cta ghost" id="plan">Plan dry run</button>
+      <div id="runout" class="small-note"></div>
+    </section>
+  </main>
+  <footer><span>Prepare to devnet runs as a separate authenticated CLI: <code>npm run pilot:prepare -- --run run_…</code></span></footer>
+  <script src="/pilot-app.js"></script>
+  <script>
+    const tokenInput = document.querySelector('input[name="token"]');
+    const pid = () => document.querySelector('input[name="project_id"]').value.trim();
+    const headers = () => ({ "Content-Type": "application/json", "x-operator-token": tokenInput.value.trim() });
+
+    document.getElementById("load").addEventListener("click", async () => {
+      const out = document.getElementById("claims");
+      try {
+        const data = await PILOT.api(`/api/operator/claims?project_id=${encodeURIComponent(pid())}`, { headers: headers() });
+        out.innerHTML = data.claims.map((c) => `
+          <div class="panel">
+            <div class="mono">${PILOT.esc(c.claim_id)} · ${c.dimension} · ${c.status}${c.url ? ` · <a class="link" target="_blank" href="${PILOT.esc(c.url)}">source</a>` : " · <span class='bad'>no public source — review-only, never promotable</span>"}</div>
+            <div class="small-note">${PILOT.esc(c.statement)}</div>
+            <button class="cta ghost" data-claim="${c.claim_id}">Mark VERIFIED</button>
+          </div>`).join("") || "<p class='small-note'>no claims</p>";
+        out.querySelectorAll("button[data-claim]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            try {
+              await PILOT.post("/api/operator/claim/decide", {
+                project_id: pid(), claim_id: btn.dataset.claim, decision: "VERIFIED", verifier: "operator-console",
+              });
+              btn.textContent = "VERIFIED ✓"; btn.disabled = true;
+            } catch (err) { alert(err.message); }
+          });
+        });
+      } catch (err) {
+        out.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+
+    document.getElementById("passport").addEventListener("click", async () => {
+      const out = document.getElementById("passportout");
+      try {
+        const res = await PILOT.post("/api/operator/passport", { project_id: pid() });
+        out.innerHTML = `verdict: <span class="${res.status === "ALLOW" ? "ok" : "bad"}">${PILOT.esc(res.status)}</span> — ${PILOT.esc(res.reasons.join("; "))}`;
+      } catch (err) {
+        out.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+
+    document.getElementById("plan").addEventListener("click", async () => {
+      const out = document.getElementById("runout");
+      try {
+        const f = document.querySelector(".panel");
+        const res = await PILOT.post("/api/operator/run", {
+          project_id: pid(),
+          total_amount: f.querySelector('[name="total"]').value.trim(),
+          recipient_count: Number(f.querySelector('[name="recipients"]').value),
+        });
+        out.innerHTML = `DRY run planned ✓ <span class="mono">${PILOT.esc(res.run_id)}</span> — allocations ${res.allocations}, root <span class="mono">${PILOT.esc(res.root.slice(0, 16))}…</span>. Next: <code>npm run pilot:prepare -- --run ${PILOT.esc(res.run_id)}</code>`;
+      } catch (err) {
+        out.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

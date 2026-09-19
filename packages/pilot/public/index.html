@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ODP Early Humans</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">Open Distribution Protocol</div>
+    <nav>
+      <a class="link" href="/">Early Humans</a>
+      <a class="link" href="/project">Projects</a>
+      <a class="link" href="/claim">Claim</a>
+      <a class="link" href="/console">Operator</a>
+    </nav>
+  </header>
+  <main class="pilot">
+    <h1 class="mega"><em>Stop hunting.</em><br />Get discovered.</h1>
+    <p class="sub">Connect your own wallet, prove you own it, tell ODP what you care about.
+      Real projects match against the frozen engine — you never chase airdrops again.</p>
+
+    <section class="panel" id="enroll-panel">
+      <div class="kicker">ENROLLMENT — 3 STEPS</div>
+      <ol class="steps">
+        <li>Connect your Solana wallet (Phantom / Solflare)</li>
+        <li>Sign the one-time ownership challenge — no transaction, no fee</li>
+        <li>Pick interests + consent to be matched</li>
+      </ol>
+      <div id="enroll-form" hidden>
+        <label>X handle (self-declared)
+          <input name="x_handle" placeholder="@yourname" spellcheck="false" />
+        </label>
+        <fieldset><legend>Interests</legend><div id="tags" class="tags"></div></fieldset>
+        <label class="check">
+          <input type="checkbox" name="consent" />
+          I consent to be matched by ODP and understand my handle↔wallet record stays private unless I say otherwise.
+        </label>
+        <button class="cta" id="submit">Submit enrollment</button>
+      </div>
+      <button class="cta" id="connect">Connect Phantom / Solflare</button>
+      <div id="status" class="small-note"></div>
+    </section>
+
+    <section class="panel">
+      <div class="kicker">POOL — AGGREGATE</div>
+      <div id="pool-stats" class="small-note">loading…</div>
+    </section>
+  </main>
+  <footer><span>ODP runs on Solana Devnet for the pilot. Your wallet proves ownership by signature; ODP never asks for and never stores a private key.</span></footer>
+  <script src="/pilot-app.js"></script>
+  <script>
+    let walletPubkey = null;
+
+    PILOT.api("/api/pilot/meta").then((meta) => {
+      document.getElementById("tags").innerHTML = meta.vocabulary
+        .map((t) => `<label class="check inline"><input type="checkbox" name="tag" value="${t}" /> ${t}</label>`)
+        .join("");
+    });
+
+    PILOT.api("/api/pilot/state").then((s) => {
+      document.getElementById("pool-stats").textContent =
+        `${s.real_humans} real humans enrolled · ${s.eligible} eligible · ${s.runs.length} pilot runs`;
+    });
+
+    document.getElementById("connect").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      try {
+        const { provider, pubkey } = await PILOT.connectWallet();
+        walletPubkey = pubkey;
+        status.textContent = `wallet connected: ${pubkey} — requesting challenge…`;
+        const challenge = await PILOT.api(`/api/pilot/challenge?wallet=${encodeURIComponent(pubkey)}`);
+        status.textContent = "signing the one-time challenge in your wallet…";
+        const signature = await PILOT.signMessage(provider, challenge.message);
+        window._enrollment = { wallet: pubkey, nonce: challenge.nonce, signature };
+        document.getElementById("connect").hidden = true;
+        document.getElementById("enroll-form").hidden = false;
+        status.textContent = "wallet verified ✓ — complete the form";
+      } catch (err) {
+        status.textContent = `error: ${err.message}`;
+      }
+    });
+
+    document.getElementById("submit").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      try {
+        const interests = [...document.querySelectorAll('input[name="tag"]:checked')].map((c) => c.value);
+        const result = await PILOT.post("/api/pilot/humans", {
+          wallet: walletPubkey,
+          nonce: window._enrollment.nonce,
+          signature: window._enrollment.signature,
+          x_handle: document.querySelector('input[name="x_handle"]').value.trim(),
+          interests,
+          consent_accepted: document.querySelector('input[name="consent"]').checked,
+        });
+        status.textContent = `enrolled ✓ human_id ${result.human_id} — status ${result.status}. Keep this id; you never re-register.`;
+      } catch (err) {
+        status.textContent = `error: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

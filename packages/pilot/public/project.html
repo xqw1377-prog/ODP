@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ODP Pilot — Project Intake</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">Open Distribution Protocol</div>
+    <nav>
+      <a class="link" href="/">Early Humans</a>
+      <a class="link" href="/project">Projects</a>
+      <a class="link" href="/claim">Claim</a>
+      <a class="link" href="/console">Operator</a>
+    </nav>
+  </header>
+  <main class="pilot">
+    <h1 class="scene-title">Bring your project. <em>Earn the distribution.</em></h1>
+    <p class="sub">You provide facts and evidence candidates. ODP operators verify them against
+      public sources — only verified evidence with a public URL can raise your passport.
+      The ALLOW/WATCH/REJECT verdict is derived by the frozen engine, never declared.</p>
+    <section class="panel">
+      <div class="kicker">PROJECT</div>
+      <label>Name <input name="name" placeholder="Helios Grid" /></label>
+      <label>Symbol <input name="symbol" placeholder="HELIOS" /></label>
+      <label>Website <input name="website" placeholder="https://…" /></label>
+      <label>X account <input name="x_account" placeholder="@name" /></label>
+      <label>GitHub <input name="github" placeholder="https://github.com/… (optional)" /></label>
+      <label>Solana wallet (authority) <input name="wallet" placeholder="base58 pubkey" spellcheck="false" /></label>
+      <label>What humans do you need?
+        <textarea name="intent_text" placeholder="We need solana depin early adopters with hardware…"></textarea>
+      </label>
+      <label>Target interests (comma separated from the pilot vocabulary)
+        <input name="target_tags" placeholder="solana, depin, early_adopter" spellcheck="false" />
+      </label>
+      <div class="kicker" style="margin-top:22px">EVIDENCE CANDIDATES — JSON (one per dimension; findings from the frozen taxonomy)</div>
+      <textarea name="claims" placeholder='[{"dimension":"TEAM","statement":"…","url":"https://…","proposed_findings":["FOUNDERS_PUBLIC","PRIOR_SHIPPED"]}]'></textarea>
+      <button class="cta" id="submit">Submit for operator verification</button>
+      <div id="status" class="small-note"></div>
+    </section>
+  </main>
+  <footer><span>Self-declared claims are stored UNVERIFIED and cannot promote a passport. Verification happens against the public sources you link.</span></footer>
+  <script src="/pilot-app.js"></script>
+  <script>
+    document.getElementById("submit").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      try {
+        const f = document.querySelector(".panel");
+        const val = (n) => f.querySelector(`[name="${n}"]`).value.trim();
+        let claims = [];
+        if (val("claims")) claims = JSON.parse(val("claims"));
+        const result = await PILOT.post("/api/pilot/projects", {
+          name: val("name"),
+          symbol: val("symbol"),
+          website: val("website"),
+          x_account: val("x_account"),
+          github: val("github") || null,
+          token_address: null,
+          wallet: val("wallet"),
+          intent_text: val("intent_text"),
+          target_tags: val("target_tags") ? val("target_tags").split(",").map((s) => s.trim()).filter(Boolean) : [],
+          discovery_source: "network",
+          claims,
+        });
+        status.innerHTML = `submitted ✓ project_id <b>${PILOT.esc(result.project_id)}</b> with ${result.claims} evidence candidates — awaiting operator verification.`;
+      } catch (err) {
+        status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
