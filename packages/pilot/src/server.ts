@@ -186,13 +186,23 @@ export function createPilotServer(options: { dataDir?: string } = {}): Server {
         const body = await jsonBody<{ run_id?: string; wallet?: string; signature?: string; receipt_pda?: string }>(req);
         const run = store.runs.get(body.run_id ?? "");
         if (run === null) return json(res, 404, { error: "run not found" });
-        // machine gate: browser assertions are verified against devnet
-        const verified = await verifyClaimOnchain(new Connection(run.onchain?.rpc ?? ""), {
-          run,
-          wallet: body.wallet ?? "",
-          signature: body.signature ?? "",
-          receiptPda: body.receipt_pda ?? "",
-        });
+        // machine gate with confirmation polling: freshly submitted signatures
+        // take seconds to index on devnet's load-balanced RPCs — poll, never
+        // trust the browser, never retry protocol rejections
+        let verified: { ok: true } | { ok: false; reason: string } = { ok: false, reason: "unverified" };
+        const connection = new Connection(run.onchain?.rpc ?? "");
+        for (let attempt = 1; attempt <= 6; attempt++) {
+          verified = await verifyClaimOnchain(connection, {
+            run,
+            wallet: body.wallet ?? "",
+            signature: body.signature ?? "",
+            receiptPda: body.receipt_pda ?? "",
+          });
+          if (verified.ok) break;
+          const retriable = /not found on devnet|not confirmed yet/.test(verified.reason);
+          if (!retriable) break;
+          await new Promise((r2) => setTimeout(r2, 7000));
+        }
         if (!verified.ok) return json(res, 409, { error: verified.reason });
         const human = store.humans.list().find((h) => h.wallet === body.wallet);
         if (human === undefined) return json(res, 404, { error: "human not found" });
