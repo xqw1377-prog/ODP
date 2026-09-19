@@ -64,16 +64,22 @@ export function createPilotServer(options: { dataDir?: string } = {}): Server {
       const query = new URLSearchParams((req.url ?? "").split("?")[1] ?? "");
 
       // ── static pages ─────────────────────────────────────────────────
-      if (req.method === "GET" && (PAGES.has(url) || url === "/style.css" || url === "/pilot-app.js")) {
-        const file = url === "/style.css" ? "style.css" : url === "/pilot-app.js" ? "pilot-app.js" : `${url === "/" ? "index" : url.slice(1)}.html`;
-        const target = normalize(join(publicDir, file));
-        if (!target.startsWith(publicDir)) return json(res, 404, { error: "not found" });
-        try {
-          const body = readFileSync(target);
-          res.writeHead(200, { "Content-Type": MIME[file.endsWith(".css") ? ".css" : file.endsWith(".js") ? ".js" : ".html"] });
-          return res.end(body);
-        } catch {
-          return json(res, 404, { error: "not found" });
+      if (req.method === "GET") {
+        const rel =
+          url === "/" ? "index.html" : PAGES.has(url) ? `${url.slice(1)}.html` : url.slice(1);
+        const allowed =
+          PAGES.has(url) || rel === "style.css" || rel === "pilot-app.js" || rel.startsWith("vendor/");
+        if (allowed) {
+          const target = normalize(join(publicDir, rel));
+          if (!target.startsWith(publicDir)) return json(res, 404, { error: "not found" });
+          try {
+            const body = readFileSync(target);
+            const ext = rel.endsWith(".css") ? ".css" : rel.endsWith(".js") ? ".js" : ".html";
+            res.writeHead(200, { "Content-Type": MIME[ext] ?? "application/octet-stream" });
+            return res.end(body);
+          } catch {
+            return json(res, 404, { error: "not found" });
+          }
         }
       }
 
