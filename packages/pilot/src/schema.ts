@@ -10,7 +10,10 @@ import { ScoreProvenanceSchema } from "./provenance.js";
 
 // ── humans ──────────────────────────────────────────────────────────────
 
-export const HumanStatusSchema = z.enum(["ELIGIBLE", "MATCHED", "ALLOCATED", "CLAIMED"]);
+/* Qualification-only status: a human is a network node, not a one-shot
+   coupon. Match/allocate/claim progress lives in the Project×Human×Run
+   ledger (PilotRun), never on the human itself. */
+export const HumanStatusSchema = z.enum(["ELIGIBLE", "REVIEW", "DISABLED"]);
 export type HumanStatus = z.infer<typeof HumanStatusSchema>;
 
 export const XIdentityStatusSchema = z.enum(["SELF_DECLARED"]); // "X_VERIFIED" reserved for real OAuth

@@ -85,17 +85,17 @@ test("toHumanProfile emits a frozen-schema-valid HumanProfile with provenance va
   assert.deepEqual(profile.risk_flags, []);
 });
 
-test("match pool = REAL + ELIGIBLE only; FIXTURE humans and progressed humans are excluded", () => {
+test("match pool = REAL + ELIGIBLE only; FIXTURE and disqualified humans are excluded", () => {
   const store = makeTempStore();
   enrollHuman(store, { handle: "@one" });
   enrollHuman(store, { handle: "@two" });
   store.humans.save(sampleHuman({ source: "FIXTURE", human_id: "hum_fixture00001" })); // never counts
-  const matched = sampleHuman({ status: "MATCHED" });
-  store.humans.save(matched); // progressed past ELIGIBLE
+  const disabled = sampleHuman({ status: "DISABLED" }); // qualification revoked
+  store.humans.save(disabled);
 
   const pool = eligiblePool(store);
   assert.equal(pool.length, 2);
-  // real count = every REAL human regardless of progress (2 ELIGIBLE + 1 MATCHED); FIXTURE excluded
+  // real count = every REAL human regardless of qualification (2 ELIGIBLE + 1 DISABLED); FIXTURE excluded
   assert.equal(realHumanCount(store), 3);
-  assert.ok(pool.every((p) => p.human_id !== matched.human_id));
+  assert.ok(pool.every((p) => p.human_id !== disabled.human_id));
 });

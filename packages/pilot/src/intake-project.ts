@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PublicKey } from "@solana/web3.js";
 import { PositiveU64String, ProjectCandidateSchema } from "@odp/domain";
 import { FindingKindSchema } from "@odp/passport-engine";
 import { foreignFindings } from "./finding-ownership.js";
@@ -49,6 +50,12 @@ export function submitProject(store: PilotStore, input: ProjectIntakeInput): Pro
     return { ok: false, reason: "website must be a valid URL" };
   if (input.github !== undefined && input.github !== null && z.string().url().safeParse(input.github).success === false)
     return { ok: false, reason: "github must be a valid URL" };
+  // P1-B review secondary fix: a field named "Solana wallet" is validated as one
+  try {
+    new PublicKey(input.wallet);
+  } catch {
+    return { ok: false, reason: "wallet must be a valid Solana pubkey (base58)" };
+  }
   if (input.intent_text.trim().length < 8)
     return { ok: false, reason: "describe what humans you need (intent, min 8 chars)" };
   if (input.target_tags.length < 1) return { ok: false, reason: "pick at least one target interest" };

@@ -4,10 +4,12 @@ import { toCandidate } from "./intake-project.js";
 import type { EvidenceClaim, PilotProject } from "./schema.js";
 import type { PilotStore } from "./store.js";
 
-/* D5-R enforcement point: SELF_DECLARED evidence candidates stay in the pilot
-   sidecar until an operator has verified them against a public source. ONLY
-   VERIFIED claims are converted into frozen-pipeline observations — so a
-   project can hand us clues, but it cannot issue itself a passport. */
+/* D5-R enforcement point + evidence honesty (P1-B review, blocker 1): a
+   SELF_DECLARED candidate stays in the pilot sidecar until an operator has
+   verified it — and a positive finding may only enter the PUBLIC-SOURCE
+   bundle when the operator verified it against a PUBLIC, traceable source
+   URL. Manual review without a public URL is recorded but never promotes a
+   passport. A project can hand us clues; it cannot issue itself a passport. */
 
 export type ClaimDecision = "VERIFIED" | "REJECTED";
 
@@ -37,13 +39,16 @@ export function decideClaim(
 
 /** Observation provenance is honest about how it was verified. */
 function observationSource(claim: EvidenceClaim): string {
-  return claim.url !== null ? "public-web (operator-verified)" : "operator-review";
+  return "public-web (operator-verified)";
 }
 
+/** Evidence honesty (blocker 1): only VERIFIED claims backed by a public,
+    traceable URL may enter the PUBLIC-SOURCE bundle. VERIFIED claims without
+    a URL stay review-only in the sidecar — they can never promote a finding. */
 export function buildEvidenceBundle(store: PilotStore, project: PilotProject, at = new Date()): EvidenceBundle {
   const verified = store
     .getClaims(project.project_id)
-    .filter((c) => c.status === "VERIFIED"); // D5-R: UNVERIFIED/REJECTED never enter
+    .filter((c) => c.status === "VERIFIED" && c.url !== null); // D5-R + blocker 1
 
   const observations = { TEAM: [], PRODUCT: [], CODE: [], TOKEN: [], ONCHAIN: [], SOCIAL: [] } as Record<
     "TEAM" | "PRODUCT" | "CODE" | "TOKEN" | "ONCHAIN" | "SOCIAL",
@@ -64,6 +69,14 @@ export function buildEvidenceBundle(store: PilotStore, project: PilotProject, at
     maturity: "PUBLIC-SOURCE",
     observations,
   });
+}
+
+/** Review-only claims: verified by an operator but without a public source —
+    recorded for the audit trail, never passport-promoting. */
+export function reviewOnlyClaims(store: PilotStore, project_id: string): EvidenceClaim[] {
+  return store
+    .getClaims(project_id)
+    .filter((c) => c.status === "VERIFIED" && c.url === null);
 }
 
 export function generatePassportForProject(

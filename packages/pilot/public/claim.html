@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ODP Pilot — Claim</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">Open Distribution Protocol</div>
+    <nav>
+      <a class="link" href="/">Early Humans</a>
+      <a class="link" href="/project">Projects</a>
+      <a class="link" href="/claim">Claim</a>
+      <a class="link" href="/console">Operator</a>
+    </nav>
+  </header>
+  <main class="pilot">
+    <h1 class="scene-title">Your allocation, <em>your keys.</em></h1>
+    <p class="sub">The backend builds the claim transaction — <b>your wallet signs it</b>.
+      ODP never holds a private key and never signs for you.</p>
+    <section class="panel">
+      <label>Run id <input name="run_id" placeholder="run_…" spellcheck="false" /></label>
+      <button class="cta" id="connect">Connect your wallet</button>
+      <div id="alloc" hidden>
+        <div class="amount-mid" id="amount"></div>
+        <div class="small-note" id="detail"></div>
+        <button class="cta" id="claim">Sign &amp; send claim from my wallet</button>
+      </div>
+      <div id="status" class="small-note"></div>
+    </section>
+  </main>
+  <footer><span>Fee payer is your wallet. The ClaimReceipt PDA appears on devnet after confirmation and enters the pilot evidence ledger.</span></footer>
+  <script src="/pilot-app.js"></script>
+  <script>
+    let provider = null, pubkey = null, runId = null, built = null;
+
+    document.getElementById("connect").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      try {
+        const conn = await PILOT.connectWallet();
+        provider = conn.provider; pubkey = conn.pubkey;
+        runId = document.querySelector('input[name="run_id"]').value.trim();
+        status.textContent = `wallet ${pubkey} — checking allocation…`;
+        const statusRes = await PILOT.api(`/api/pilot/claim/status?run_id=${encodeURIComponent(runId)}&wallet=${encodeURIComponent(pubkey)}`);
+        document.getElementById("alloc").hidden = false;
+        document.getElementById("amount").innerHTML = `${PILOT.esc(statusRes.amount)} <span>TOKENS</span>`;
+        document.getElementById("detail").textContent = `matched allocation for ${pubkey}`;
+      } catch (err) {
+        status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+
+    document.getElementById("claim").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      try {
+        status.textContent = "requesting claim transaction from backend…";
+        built = await PILOT.post("/api/pilot/claim/build", { run_id: runId, wallet: pubkey });
+        status.textContent = built.message + " — confirm in your wallet.";
+        // Phantom / Solflare JSON-RPC: wallet injects its signature into the
+        // base64 legacy transaction and submits it to devnet itself.
+        const sent = await provider.request({
+          method: "signAndSendTransaction",
+          params: { message: built.transaction, encoding: "base64" },
+        });
+        const signature = typeof sent === "string" ? sent : sent?.signature;
+        if (!signature) throw new Error("wallet did not return a signature");
+        status.textContent = "waiting for devnet confirmation + receipt machine gate…";
+        const confirmed = await PILOT.post("/api/pilot/claim/confirm", {
+          run_id: runId, wallet: pubkey, signature, receipt_pda: built.receipt_pda,
+        });
+        status.innerHTML = `<span class="ok">Ownership delivered.</span> receipt ${PILOT.esc(confirmed.receipt_pda)} recorded in the evidence ledger.`;
+      } catch (err) {
+        status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

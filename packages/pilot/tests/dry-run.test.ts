@@ -6,7 +6,8 @@ import { DISTRIBUTOR_PROGRAM_ID } from "@odp/distribution-engine";
 import { decideClaim, generatePassportForProject } from "../src/verify-claims.js";
 import { submitProject, type ProjectClaimInput } from "../src/intake-project.js";
 import { planRun } from "../src/runner.js";
-import { assertClaimable, buildClaimTransaction, offlineBlockhash, recordClaim } from "../src/claim-tx.js";
+import { eligiblePool } from "../src/intake-human.js";
+import { assertClaimable, buildClaimTransaction, offlineBlockhash, recordConfirmedClaim, verifyClaimOnchain } from "../src/claim-tx.js";
 import { base58Decode } from "../src/base58.js";
 import { createHash } from "node:crypto";
 import { enrollHuman, generateWalletKeys, makeTempStore, T } from "./helpers.js";
@@ -44,7 +45,7 @@ const ALLOW_CLAIMS: ProjectClaimInput[] = [
   {
     dimension: "ONCHAIN",
     statement: "No abnormal treasury flows observed",
-    url: null,
+    url: "https://explorer.solana.com/account/H3liosTreasuryExamp1eX7qVNE9dJm1LkzPwR4TgHc?cluster=devnet",
     proposed_findings: ["NO_ABNORMAL_FLOWS"],
   },
   {
@@ -176,7 +177,7 @@ test("requesting more recipients than the eligible pool fails closed", () => {
   if (!short.ok) assert.match(short.reason, /eligible pool has 1/);
 });
 
-test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger recording", () => {
+test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger recording", async () => {
   const store = makeTempStore();
   const submitted = submitHelios(store);
   for (const c of submitted.claims) {
@@ -235,9 +236,49 @@ test("self-custody claim: guards, unsigned-tx build for the human wallet, ledger
   assert.deepEqual(tx.signatures[0]!.publicKey.toBytes(), base58Decode(h1.wallet));
   assert.ok(tx.instructions[0]!.programId.equals(DISTRIBUTOR_PROGRAM_ID));
 
-  // ledger recording progresses the human and blocks re-claiming
-  recordClaim(store, run, h1.human_id, { claim_tx: "sig-claim-1", receipt_pda: built.receipt_pda });
-  assert.equal(store.humans.get(h1.human_id)?.status, "CLAIMED");
+  // machine gate: only an on-chain confirmed signature + existing receipt records a claim
+  const goodRpc = {
+    getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "finalized" }] }),
+    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+  };
+  assert.deepEqual(
+    await verifyClaimOnchain(goodRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda }),
+    { ok: true },
+  );
+
+  const failedTxRpc = {
+    getSignatureStatuses: async () => ({ value: [{ err: {}, confirmationStatus: "finalized" }] }),
+    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+  };
+  const txFailed = await verifyClaimOnchain(failedTxRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
+  assert.equal(txFailed.ok, false);
+  if (!txFailed.ok) assert.match(txFailed.reason, /failed on-chain/);
+
+  const noReceiptRpc = {
+    getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "confirmed" }] }),
+    getAccountInfo: async () => null,
+  };
+  const noReceipt = await verifyClaimOnchain(noReceiptRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
+  assert.equal(noReceipt.ok, false);
+  if (!noReceipt.ok) assert.match(noReceipt.reason, /does not exist/);
+
+  const wrongReceipt = await verifyClaimOnchain(goodRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda.slice(0, -2) + "xy" });
+  assert.equal(wrongReceipt.ok, false);
+  if (!wrongReceipt.ok) assert.match(wrongReceipt.reason, /does not match/);
+
+  const unconfirmedRpc = {
+    getSignatureStatuses: async () => ({ value: [{ err: null, confirmationStatus: "processed" }] }),
+    getAccountInfo: async () => ({ data: new Uint8Array(16) }),
+  };
+  const pending = await verifyClaimOnchain(unconfirmedRpc, { run, wallet: h1.wallet, signature: "sig-claim-1", receiptPda: built.receipt_pda });
+  assert.equal(pending.ok, false);
+  if (!pending.ok) assert.match(pending.reason, /not confirmed/);
+
+  // only after the gate passes does the ledger record — and the human STAYS
+  // ELIGIBLE (network node, not a one-shot coupon; blocker 2 fix)
+  recordConfirmedClaim(store, run, h1.human_id, { claim_tx: "sig-claim-1", receipt_pda: built.receipt_pda });
+  assert.equal(store.humans.get(h1.human_id)?.status, "ELIGIBLE");
+  assert.ok(eligiblePool(store).some((p) => p.human_id === h1.human_id)); // still matchable for future projects
   const updated = store.runs.get(run.run_id)!;
   assert.equal(updated.claims[h1.human_id]?.claim_tx, "sig-claim-1");
 
