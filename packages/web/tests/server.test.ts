@@ -1,7 +1,5 @@
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import path from "node:path";
-import { tmpdir } from "node:os";
 import { createDemoServer, handleDemoRequest, requestPath, resolveListenHost, resolveListenPort } from "../src/server.js";
 
 /** Smoke: the demo server serves the 4 routes and real-pipeline API data. */
@@ -62,52 +60,42 @@ describe("demo server smoke", { concurrency: false }, () => {
     assert.equal(res.status, 404);
   });
 
-  it("serves Early Humans V0 boarding door without changing demo routes", async () => {
+  it("serves static Early Humans opening-soon without intake fields", async () => {
     await listening;
     const p = await port;
     const res = await fetch(`http://127.0.0.1:${p}/early-humans`);
     assert.equal(res.status, 200);
-    assert.ok((await res.text()).includes("Open Distribution Protocol"));
-    const tags = await (await fetch(`http://127.0.0.1:${p}/api/pilot/tags`)).json() as {
-      slogan: string;
-      sub: string;
-      tags: Array<{ slug: string }>;
-    };
-    assert.equal(tags.slogan, "Stop hunting. Get discovered.");
-    assert.match(tags.sub, /Connect your X and Solana wallet/);
-    assert.equal(tags.tags.length, 10);
-    const poolRes = await fetch(`http://127.0.0.1:${p}/api/pilot/pool`);
-    assert.equal(poolRes.status, 200);
-    const pool = (await poolRes.json()) as { target: number; stretch_hold: number };
-    assert.equal(pool.target, 30);
-    assert.equal(pool.stretch_hold, 1000);
+    const body = await res.text();
+    assert.ok(body.includes("Stop hunting. Get discovered."));
+    assert.ok(body.includes("OPENING SOON"));
+    assert.ok(body.includes("https://github.com/xqw1377-prog/ODP"));
+    assert.ok(!/name="wallet"|name="consent"|name="x_handle"|<form/i.test(body));
+    const footer = await (await fetch(`http://127.0.0.1:${p}/radar`)).text();
+    assert.ok(!footer.includes('href="/pool"'));
   });
 
-  it("POST /api/pilot/humans persists into ODP_PILOT_DATA_DIR", async () => {
-    const prev = process.env.ODP_PILOT_DATA_DIR;
-    const dataDir = path.join(tmpdir(), `odp-web-pilot-${process.pid}-${Date.now()}`);
-    process.env.ODP_PILOT_DATA_DIR = dataDir;
-    try {
-      const p = await port;
-      const res = await fetch(`http://127.0.0.1:${p}/api/pilot/humans`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          x_handle: "@vercel_pilot",
-          wallet: "7ZBKhXPypo5nW7F8oCdmEgK8zAcbGSm1X4GEtnhzUHhp",
-          interest_tags: ["Solana", "DePIN", "Early Adopter"],
-          x_stub_acknowledged: true,
-          consent: true,
-        }),
-      });
-      assert.equal(res.status, 200);
-      const body = (await res.json()) as { slogan: string; x_id: string; eligible: boolean };
-      assert.equal(body.slogan, "Stop hunting. Get discovered.");
-      assert.equal(body.x_id, "@vercel_pilot");
-      assert.equal(body.eligible, true);
-    } finally {
-      if (prev === undefined) delete process.env.ODP_PILOT_DATA_DIR;
-      else process.env.ODP_PILOT_DATA_DIR = prev;
+  it("holds public intake writes and identity dumps", async () => {
+    const p = await port;
+    const post = await fetch(`http://127.0.0.1:${p}/api/pilot/humans`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x_handle: "@vercel_pilot",
+        wallet: "7ZBKhXPypo5nW7F8oCdmEgK8zAcbGSm1X4GEtnhzUHhp",
+        interest_tags: ["Solana", "DePIN", "Early Adopter"],
+        x_stub_acknowledged: true,
+        consent: true,
+      }),
+    });
+    assert.equal(post.status, 403);
+    const held = (await post.json()) as { error: string };
+    assert.match(held.error, /PUBLIC INTAKE = HOLD/);
+    for (const path of ["/api/pilot/pool", "/api/pilot/pool.txt", "/api/pilot/humans"]) {
+      const dump = await fetch(`http://127.0.0.1:${p}${path}`);
+      assert.equal(dump.status, 410, path);
+      const text = await dump.text();
+      assert.ok(!/"wallet"\s*:/.test(text), path);
+      assert.ok(!/"x_id"\s*:/.test(text), path);
     }
   });
 });

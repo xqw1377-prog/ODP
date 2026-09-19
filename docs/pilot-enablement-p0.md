@@ -81,7 +81,7 @@ Funnel (sidecar, not HumanProfile):
 
 Near-term ops target: **30 ELIGIBLE** seed (10 builders / 8 DePIN-node / 5 infra / 4 early adopters / 3 founders). 1000 is stretch HOLD.
 
-UI: `http://127.0.0.1:3000/early-humans` (local) or `https://odp.mealkey.cn/early-humans` (Vercel). Pool dump: `/pool`, `/api/pilot/pool`, `/api/pilot/pool.txt`, or `npm run pilot:pool`. CLI:
+Public UI `/early-humans` is **OPENING SOON** (Commander: PUBLIC INTAKE = HOLD until wallet-signature verification). No wallet paste, no consent checkbox. Public `/api/pilot/pool*` dumps are 410. CLI `npm run pilot:pool` remains local-ops only.
 
 ```bash
 npm run pilot:intake-human -- --file packages/pilot/fixtures/humans/hum_pilot_ada.intake.json

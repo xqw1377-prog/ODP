@@ -8,10 +8,12 @@
   ],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}"
+      "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}",
+      "excludeFiles": "{**/.odp/**,**/.odp/devnet-keys/**,**/*devnet-keys*,**/*.pem}"
     },
     "server.ts": {
-      "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}"
+      "includeFiles": "{packages/web/public/**,packages/passport-engine/fixtures/**,packages/matching-engine/fixtures/**,packages/domain/fixtures/**,packages/pilot/fixtures/**,packages/*/dist/**}",
+      "excludeFiles": "{**/.odp/**,**/.odp/devnet-keys/**,**/*devnet-keys*,**/*.pem}"
     }
   }
 }

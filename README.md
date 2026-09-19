@@ -111,7 +111,7 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 
 如果仪表盘仍把 Root Directory 留在 `packages/web`,该目录下的 `vercel.json` / `api/index.ts` 同样走函数 + rewrite,并 `cd ../..` 安装/编译。
 
-部署后公开路径:`/early-humans`(口号必须是 `Stop hunting. Get discovered.`)、`/api/pilot/tags`、`POST /api/pilot/humans`。
+公开 `/early-humans` 现为 **OPENING SOON** 静态页(口号不变)。**PUBLIC INTAKE = HOLD**：`POST /api/pilot/humans` 返回 403，不落盘；`/api/pilot/pool` 与 `/api/pilot/pool.txt` 返回 410，不导出 handle/wallet。`.vercelignore` 与 `functions.excludeFiles` 排除 `.odp/` / `devnet-keys` / `*.pem`，私钥不进函数包。
 
 环境变量(Settings → Environment Variables, Production + Preview):
 
