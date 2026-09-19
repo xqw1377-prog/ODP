@@ -19,6 +19,7 @@ export const EARLY_HUMAN_V0_UNSCORED = {
 /** @deprecated alias — same unscored zeros; do not treat as measured scores */
 export const EARLY_HUMAN_V0_STUB_SCORES = EARLY_HUMAN_V0_UNSCORED;
 
+/** Commander-frozen landing copy. Do not paraphrase; do not say "Join our beta". */
 export const SLOGAN = "Stop hunting. Get discovered.";
 export const LANDING_SUB =
   "Connect your X and Solana wallet. Tell ODP what you care about. Qualified crypto projects can find you when there's a real match.";

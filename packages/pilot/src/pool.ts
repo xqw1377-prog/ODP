@@ -70,9 +70,11 @@ export function readPilotPool(dataDir = getPilotDataDir()): PilotPoolSnapshot {
 }
 
 export function formatPoolDump(pool: PilotPoolSnapshot): string {
+  const c = pool.composition_target;
   return [
     `ODP Early Humans — ${pool.slogan}`,
-    `ELIGIBLE: ${pool.eligible} / ${pool.target} seed  (1000 stretch HOLD)`,
+    `ELIGIBLE: ${pool.eligible} / ${pool.target} seed  (${pool.stretch_hold} stretch HOLD)`,
+    `composition target: ${c.builders} builders / ${c.depin_node} DePIN-node / ${c.infra} infra / ${c.early_adopters} early adopters / ${c.founders} founders`,
     `review: ${pool.review.length}`,
     ...pool.humans.map((h) => `${h.human_id}\t${h.x_id}\t${h.interest_tags.join(",")}`),
     "",

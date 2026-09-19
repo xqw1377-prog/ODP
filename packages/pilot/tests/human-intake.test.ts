@@ -5,7 +5,11 @@ import path from "node:path";
 import { HumanProfileSchema } from "@odp/domain";
 import {
   EARLY_HUMAN_V0_UNSCORED,
+  FUNNEL_STAGES,
   LANDING_SUB,
+  POOL_COMPOSITION_TARGET,
+  POOL_SEED_TARGET,
+  POOL_STRETCH_HOLD,
   SLOGAN,
   intakeHuman,
 } from "../src/human-intake.js";
@@ -18,8 +22,32 @@ const ada = JSON.parse(readFileSync(HUMAN_INTAKES[0]!, "utf8"));
 describe("Early Humans V0 intake", () => {
   it("slogan is the product line", () => {
     assert.equal(SLOGAN, "Stop hunting. Get discovered.");
-    assert.match(LANDING_SUB, /Connect your X and Solana wallet/);
-    assert.ok(!/join our beta/i.test(LANDING_SUB));
+    assert.equal(
+      LANDING_SUB,
+      "Connect your X and Solana wallet. Tell ODP what you care about. Qualified crypto projects can find you when there's a real match.",
+    );
+    assert.ok(!/join our beta/i.test(`${SLOGAN}\n${LANDING_SUB}`));
+    assert.deepEqual([...FUNNEL_STAGES], [
+      "DISCOVERED",
+      "INVITED",
+      "LANDING",
+      "X_CONNECTED",
+      "WALLET_BOUND",
+      "CONSENTED",
+      "INTERESTS_COMPLETED",
+      "ELIGIBLE_HUMAN",
+      "MATCHED",
+      "CLAIMED",
+    ]);
+    assert.equal(POOL_SEED_TARGET, 30);
+    assert.equal(POOL_STRETCH_HOLD, 1000);
+    assert.deepEqual({ ...POOL_COMPOSITION_TARGET }, {
+      builders: 10,
+      depin_node: 8,
+      infra: 5,
+      early_adopters: 4,
+      founders: 3,
+    });
   });
 
   it("persists a frozen HumanProfile after stub X + wallet + 3–5 tags + consent", () => {

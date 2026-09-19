@@ -353,7 +353,8 @@ async function renderPool() {
     <section class="hero">
       <div class="kicker" style="margin-top:0">EARLY HUMANS POOL</div>
       <h1 class="mega rise">${esc(pool.slogan).replace("Get discovered.", "<em>Get discovered.</em>")}</h1>
-      <p class="hero-sub">ELIGIBLE ${pool.eligible} / ${pool.target} seed. 1000 stretch is HOLD.</p>
+      <p class="hero-sub">ELIGIBLE ${pool.eligible} / ${pool.target} seed. ${pool.stretch_hold} stretch is HOLD.</p>
+      <p class="small-note center">Seed mix: ${pool.composition_target.builders} builders / ${pool.composition_target.depin_node} DePIN-node / ${pool.composition_target.infra} infra / ${pool.composition_target.early_adopters} early adopters / ${pool.composition_target.founders} founders</p>
     </section>
     <div class="panel" style="max-width:640px;margin:28px auto 0">
       <div class="strip-label">ELIGIBLE HUMANS ONLY — MATCH POOL</div>
