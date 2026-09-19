@@ -304,7 +304,8 @@ const IS_MAIN = (() => {
 
 if (IS_MAIN) {
   const PORT = Number(process.env.ODP_PILOT_PORT ?? 3200);
-  createPilotServer().listen(PORT, "127.0.0.1", () => {
-    console.log(`ODP pilot backend: http://127.0.0.1:${PORT}/`);
+  const HOST = process.env.ODP_PILOT_HOST ?? "127.0.0.1";
+  createPilotServer().listen(PORT, HOST, () => {
+    console.log(`ODP pilot backend: http://${HOST}:${PORT}/`);
   });
 }

@@ -1,0 +1,55 @@
+# DEPLOY-1 / FLY GO — commander lock 2026-09-20
+#
+# HOSTING = FLY.IO (Railway = FALLBACK ONLY)
+# PUBLIC HOST = enroll.odp.mealkey.cn
+#   DNS later: CNAME enroll.odp.mealkey.cn → odp-pilot.fly.dev
+#   TLS certificates: Fly-managed (`fly certs add enroll.odp.mealkey.cn`)
+# INSTANCE = 1 Machine ONLY — never scale to 2+ (`fly scale count 2` DENIED)
+# SIZE = shared-cpu-1x / 1GB RAM (not 256MB)
+# auto_stop_machines = false
+# min_machines_running = 1
+# PERSISTENCE = Fly Volume mount /data ; ODP_PILOT_DATA=/data
+#   PilotStore creates humans/ projects/ runs/ challenges/ claims/ engine/
+#   under that root — no extra /data/pilot mkdir.
+# PILOT SEMANTICS = FROZEN (this file is ops only)
+# SECRETS (never commit): ODP_OPERATOR_TOKEN via `fly secrets set`
+# AUTHORITY: dedicated DEVNET pilot authority only (operator-held; not in image)
+# SNAPSHOTS: scheduled_snapshots = true (daily). Recommend additional daily
+#   backup later (off-Fly copy of /data), not a substitute for snapshots.
+
+app = "odp-pilot"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ODP_PILOT_HOST = "0.0.0.0"
+  ODP_PILOT_PORT = "3200"
+  ODP_PILOT_DATA = "/data"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3200
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/api/pilot/meta"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[mounts]
+  source = "odp_pilot_data"
+  destination = "/data"
+  initial_size = "1gb"
+  scheduled_snapshots = true
+  snapshot_retention = 5
