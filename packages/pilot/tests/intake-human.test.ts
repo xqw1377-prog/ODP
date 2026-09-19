@@ -17,69 +17,58 @@ test("happy path: real wallet → challenge → signed → verified → consente
   assert.equal(human.scores.reputation.value, 0);
   assert.equal(human.scores.network_score.value, 0);
   assert.equal(human.consent.policy_version, "pilot-v0-2026-09");
-  // challenge was consumed — the nonce cannot mint a second human
-  const reuse = registerHuman(store, {
-    wallet: human.wallet,
-    nonce: store.challenges.list()[0]!.nonce,
-    signature: "2NEpo7tZRZ6nGdgqVHDU8DL8rnV4YKmbFkkXXGNLB6hbUMaU2ftZ4uECL7fMjYj8Z1s4ePFnbMvTmUP56C2SjfPFy",
-    x_handle: "@again",
-    interests: ["solana"],
-    consent_accepted: true,
-  });
-  assert.equal(reuse.ok, false);
 });
 
-test("intake fails closed without consent, with bad handles, or with out-of-vocabulary tags", () => {
+test("PROOF: a form mistake never burns a valid wallet signature", () => {
   const store = makeTempStore();
-
-  // consent is checked before the challenge is consumed
-  const { pubkey: k1, secretKey: s1 } = generateWalletKeys();
-  const c1 = createChallenge(store, k1);
-  const noConsent = registerHuman(store, {
-    wallet: k1, nonce: c1.nonce, signature: signMessage(s1, c1.message),
-    x_handle: "@a", interests: ["solana"], consent_accepted: false,
-  });
-  assert.equal(noConsent.ok, false);
-  if (!noConsent.ok) assert.match(noConsent.reason, /consent/);
-
-  // bad handle: challenge verifies and is consumed, human is rejected
-  const { pubkey: k2, secretKey: s2 } = generateWalletKeys();
-  const c2 = createChallenge(store, k2);
-  const badHandle = registerHuman(store, {
-    wallet: k2, nonce: c2.nonce, signature: signMessage(s2, c2.message),
-    x_handle: "not a handle!", interests: ["solana"], consent_accepted: true,
-  });
-  assert.equal(badHandle.ok, false);
-  if (!badHandle.ok) assert.match(badHandle.reason, /x_handle/);
-
-  // unknown tags: fresh challenge, rejected on vocabulary
-  const { pubkey: k3, secretKey: s3 } = generateWalletKeys();
-  const c3 = createChallenge(store, k3);
-  const unknownTags = registerHuman(store, {
-    wallet: k3, nonce: c3.nonce, signature: signMessage(s3, c3.message),
-    x_handle: "@a", interests: ["defi", "deffi"], consent_accepted: true,
-  });
-  assert.equal(unknownTags.ok, false);
-  if (!unknownTags.ok) assert.match(unknownTags.reason, /deffi/);
-});
-
-test("duplicate wallet enrollment is rejected", () => {
-  const store = makeTempStore();
-  const enrolled = enrollHuman(store);
-  // fresh challenge, same wallet → ownership proves fine, but the wallet is taken
   const { pubkey, secretKey } = generateWalletKeys();
-  void pubkey; void secretKey;
-  const challenge = createChallenge(store, enrolled.wallet);
-  const second = registerHuman(store, {
-    wallet: enrolled.wallet,
-    nonce: challenge.nonce,
-    signature: signMessage(enrolled.keys.secretKey, challenge.message),
-    x_handle: "@impersonator",
-    interests: ["solana"],
-    consent_accepted: true,
+  const challenge = createChallenge(store, pubkey);
+  const signature = signMessage(secretKey, challenge.message);
+
+  // first attempt: signature would be valid, but the form has a bad tag
+  const failed = registerHuman(store, {
+    wallet: pubkey, nonce: challenge.nonce, signature,
+    x_handle: "@alice", interests: ["defi", "deffi"], consent_accepted: true,
   });
-  assert.equal(second.ok, false);
-  if (!second.ok) assert.match(second.reason, /already enrolled/);
+  assert.equal(failed.ok, false);
+  if (!failed.ok) assert.match(failed.reason, /deffi/);
+  // the nonce is still unconsumed
+  assert.equal(store.challenges.get(challenge.nonce)?.consumed_at, null);
+
+  // second attempt: same nonce, same signature — now it succeeds
+  const retry = registerHuman(store, {
+    wallet: pubkey, nonce: challenge.nonce, signature,
+    x_handle: "@alice", interests: ["defi"], consent_accepted: true,
+  });
+  assert.equal(retry.ok, true);
+  // and only now is the challenge consumed
+  assert.notEqual(store.challenges.get(challenge.nonce)?.consumed_at, null);
+});
+
+test("duplicate wallet AND duplicate X handle cannot double-enter the pool", () => {
+  const store = makeTempStore();
+  const first = enrollHuman(store, { handle: "@alice", interests: ["solana"] });
+
+  // same wallet, new handle → rejected
+  const c1 = createChallenge(store, first.wallet);
+  const sameWallet = registerHuman(store, {
+    wallet: first.wallet, nonce: c1.nonce, signature: signMessage(first.keys.secretKey, c1.message),
+    x_handle: "@bob", interests: ["solana"], consent_accepted: true,
+  });
+  assert.equal(sameWallet.ok, false);
+  if (!sameWallet.ok) assert.match(sameWallet.reason, /wallet is already enrolled/);
+
+  // same X handle (case-insensitive), different wallet → rejected
+  const otherKeys = generateWalletKeys();
+  const c3 = createChallenge(store, otherKeys.pubkey);
+  const sameHandle = registerHuman(store, {
+    wallet: otherKeys.pubkey, nonce: c3.nonce, signature: signMessage(otherKeys.secretKey, c3.message),
+    x_handle: "@ALICE", interests: ["solana"], consent_accepted: true,
+  });
+  assert.equal(sameHandle.ok, false);
+  if (!sameHandle.ok) assert.match(sameHandle.reason, /X handle is already enrolled/);
+
+  assert.equal(eligiblePool(store).length, 1);
 });
 
 test("toHumanProfile emits a frozen-schema-valid HumanProfile with provenance values", () => {

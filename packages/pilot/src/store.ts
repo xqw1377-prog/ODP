@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { PassportEngine } from "@odp/passport-engine";
 import { ChallengeSchema, type Challenge } from "./schema.js";
 import { ClaimFileSchema, type ClaimFile, type EvidenceClaim } from "./schema.js";
 import { PilotHumanSchema, type PilotHuman } from "./schema.js";
@@ -70,6 +71,7 @@ export class PilotStore {
   readonly runs: RecordStore<PilotRun>;
   readonly challenges: RecordStore<Challenge>;
   private readonly claimsDir: string;
+  private _engine: PassportEngine | null = null;
 
   constructor(readonly rootDir: string = defaultPilotDir()) {
     this.humans = new RecordStore<PilotHuman>(join(rootDir, "humans"), PilotHumanSchema, (r) => r.human_id);
@@ -78,6 +80,13 @@ export class PilotStore {
     this.challenges = new RecordStore<Challenge>(join(rootDir, "challenges"), ChallengeSchema, (r) => r.nonce);
     this.claimsDir = join(rootDir, "claims");
     mkdirSync(this.claimsDir, { recursive: true });
+  }
+
+  /** The frozen passport engine, bound to the pilot's private engine dir so
+      candidates/passports persisted at verify time are visible to the runner. */
+  get engine(): PassportEngine {
+    if (this._engine === null) this._engine = new PassportEngine({ dataDir: join(this.rootDir, "engine") });
+    return this._engine;
   }
 
   /** evidence candidates: one file per project, rewritten atomically */

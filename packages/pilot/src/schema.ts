@@ -101,6 +101,7 @@ export const PilotRunSchema = z.strictObject({
   token_mint: z.string().min(1).nullable(), // null until devnet prepare creates it
   total_amount: PositiveU64String,
   recipient_count: z.number().int().min(1),
+  status: RunStatusSchema,
   passport_status: z.literal("ALLOW"),
   matches: z.array(z.strictObject({ human_id: z.string(), score: z.number() })),
   allocations: z.array(RunAllocationSchema),

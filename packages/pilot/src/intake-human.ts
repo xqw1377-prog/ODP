@@ -8,8 +8,12 @@ import { unknownTags } from "./vocabulary.js";
 
 /* D1-R: real humans bring their OWN wallet and prove ownership by signing a
    one-time challenge. ODP stores the pubkey only. A human becomes ELIGIBLE
-   (i.e. matchable) only with wallet verification + explicit consent. Server-
-   generated FIXTURE humans never enter this path and never count as evidence. */
+   (i.e. matchable) only with wallet verification + explicit consent.
+
+   Validation order (P1-A review fix B): every STATIC check runs first and the
+   challenge is verified + consumed LAST, so a valid wallet signature is never
+   burned by a form mistake. Duplicate checks (P1-A review fix A) reject both
+   duplicate wallets AND duplicate X handles — one human, one pool entry. */
 
 export interface HumanIntakeInput {
   wallet: string;
@@ -32,10 +36,9 @@ export function normalizeHandle(raw: string): string | null {
 
 export function registerHuman(store: PilotStore, input: HumanIntakeInput): IntakeResult {
   const at = input.at ?? new Date();
-  if (input.consent_accepted !== true) return { ok: false, reason: "consent to be matched is required" };
 
-  const verify = verifyEnrollmentSignature(store, { nonce: input.nonce, wallet: input.wallet, signature: input.signature }, at);
-  if (!verify.ok) return { ok: false, reason: verify.reason };
+  // ── 1. static validation — nothing is consumed yet ────────────────────
+  if (input.consent_accepted !== true) return { ok: false, reason: "consent to be matched is required" };
 
   const handle = normalizeHandle(input.x_handle);
   if (handle === null) return { ok: false, reason: "x_handle must look like @name (1-15 letters/digits/underscore)" };
@@ -45,9 +48,18 @@ export function registerHuman(store: PilotStore, input: HumanIntakeInput): Intak
   const unknown = unknownTags(input.interests);
   if (unknown.length > 0) return { ok: false, reason: `unknown interests: ${unknown.join(", ")}` };
 
-  if (store.humans.list().some((h) => h.source === "REAL" && h.wallet === input.wallet))
+  // ── 2. duplicate guards (REAL humans only; fixtures are separate infra) ─
+  const existing = store.humans.list().filter((h) => h.source === "REAL");
+  if (existing.some((h) => h.wallet === input.wallet))
     return { ok: false, reason: "this wallet is already enrolled" };
+  if (existing.some((h) => h.x_handle.toLowerCase() === handle.toLowerCase()))
+    return { ok: false, reason: "this X handle is already enrolled — one human, one pool entry" };
 
+  // ── 3. challenge verification + consumption (LAST, after all static checks)
+  const verify = verifyEnrollmentSignature(store, { nonce: input.nonce, wallet: input.wallet, signature: input.signature }, at);
+  if (!verify.ok) return { ok: false, reason: verify.reason };
+
+  // ── 4. build + save ────────────────────────────────────────────────────
   const record: PilotHuman = {
     human_id: newHumanId(),
     source: "REAL",
