@@ -32,13 +32,7 @@
     </section>
   </main>
   <footer><span>Fee payer is your wallet. The ClaimReceipt PDA appears on devnet after confirmation and enters the pilot evidence ledger.</span></footer>
-  <script type="importmap">
-    { "imports": { "@solana/web3.js": "/vendor/web3.esm.js" } }
-  </script>
-  <script type="module">
-    import * as web3 from "@solana/web3.js";
-    window.solanaWeb3 = web3;
-  </script>
+  <script src="/vendor/web3.iife.js"></script>
   <script src="/pilot-app.js"></script>
   <script>
     let provider = null, pubkey = null, runId = null, built = null;
@@ -62,12 +56,12 @@
     document.getElementById("claim").addEventListener("click", async () => {
       const status = document.getElementById("status");
       try {
-        if (!window.solanaWeb3) throw new Error("wallet library still loading — try again in a second");
+        if (typeof odpWeb3 === "undefined") throw new Error("wallet library still loading — refresh once more");
         status.textContent = "requesting claim transaction from backend…";
         built = await PILOT.post("/api/pilot/claim/build", { run_id: runId, wallet: pubkey });
         status.textContent = built.message + " — confirm in your wallet.";
         const raw = Uint8Array.from(atob(built.transaction), (c) => c.charCodeAt(0));
-        const tx = window.solanaWeb3.Transaction.from(raw);
+        const tx = odpWeb3.Transaction.from(raw);
         // Phantom / Solflare: wallet injects its signature and submits to devnet
         const sent = await provider.signAndSendTransaction(tx);
         const signature = typeof sent === "string" ? sent : sent?.signature;
