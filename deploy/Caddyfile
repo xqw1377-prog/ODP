@@ -1,0 +1,24 @@
+# Caddy v2 site for the ODP Pilot backend (DEPLOY-1)
+# install to: /etc/caddy/Caddyfile  (merge if other sites exist)
+#
+# Public surface:  /  /project  /claim  /api/pilot/*
+# Operator surface: /console  /api/operator/*
+#   → double-gated: Caddy Basic Auth + ODP_OPERATOR_TOKEN (in-app)
+#
+# DNS prerequisite (Cloudflare, DNS-only / grey cloud for first bring-up):
+#   enroll.odp.mealkey.cn  A  <VPS IPv4>
+# Caddy obtains the HTTPS certificate automatically.
+
+enroll.odp.mealkey.cn {
+	encode zstd gzip
+
+	# operator surface: Basic Auth BEFORE proxying to the app.
+	# generate the hash with:  caddy hash-password --plaintext '<secret>'
+	# (second factor remains ODP_OPERATOR_TOKEN inside the app)
+	@operator path /console /api/operator/*
+	basic_auth @operator {
+		operator $2a$14$REPLACE_WITH_CADDY_HASH_PASSWORD_OUTPUT
+	}
+
+	reverse_proxy 127.0.0.1:3200
+}

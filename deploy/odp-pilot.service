@@ -1,0 +1,28 @@
+# systemd unit for the ODP Pilot backend (DEPLOY-1)
+# install to: /etc/systemd/system/odp-pilot.service
+# single instance only — the store is file-backed; horizontal scale is DENIED
+# until a DB migration exists.
+
+[Unit]
+Description=ODP Pilot backend (canonical @odp/pilot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=odp-pilot
+Group=odp-pilot
+EnvironmentFile=/etc/odp-pilot/odp-pilot.env
+WorkingDirectory=/opt/odp/current/packages/pilot
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=3
+
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/odp-pilot
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

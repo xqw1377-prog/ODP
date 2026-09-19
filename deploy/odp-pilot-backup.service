@@ -1,0 +1,6 @@
+[Unit]
+Description=ODP pilot private store backup (daily, retain 7)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/odp-pilot-backup.sh
