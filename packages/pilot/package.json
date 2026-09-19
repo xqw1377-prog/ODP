@@ -1,0 +1,30 @@
+{
+  "name": "@odp/pilot",
+  "version": "0.1.0",
+  "description": "ODP Pilot Enablement P0: real project/human intake adapters + generic runner (boarding doors only)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "intake-project": "tsx scripts/intake-project.ts",
+    "intake-human": "tsx scripts/intake-human.ts",
+    "run": "tsx scripts/run.ts",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@odp/domain": "*",
+    "@odp/distribution-engine": "*",
+    "@odp/matching-engine": "*",
+    "@odp/passport-engine": "*",
+    "zod": "^4.0.0"
+  }
+}

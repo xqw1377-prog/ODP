@@ -1,0 +1,61 @@
+{
+  "project_id": "prj_helios_mesh",
+  "collected_at": "2026-09-19T10:00:00Z",
+  "maturity": "FIXTURE",
+  "observations": {
+    "TEAM": [
+      {
+        "source": "public-registry",
+        "detail": "Helios Mesh founders public; previously shipped a Solana DePIN telemetry stack",
+        "url": "https://heliosmesh.example/team",
+        "at": "2026-09-19T09:00:00Z",
+        "findings": ["FOUNDERS_PUBLIC", "PRIOR_SHIPPED"]
+      }
+    ],
+    "PRODUCT": [
+      {
+        "source": "onchain",
+        "detail": "Mainnet mesh online with 1,800 weekly reporting nodes",
+        "url": "https://heliosmesh.example",
+        "at": "2026-09-19T09:10:00Z",
+        "findings": ["LIVE_MAINNET"]
+      }
+    ],
+    "CODE": [
+      {
+        "source": "github",
+        "detail": "Active public repo: weekly releases, 6 contributors, 90-day commit cadence",
+        "url": "https://github.com/heliosmesh-example",
+        "at": "2026-09-19T09:20:00Z",
+        "findings": ["ACTIVE_DEVELOPMENT"]
+      }
+    ],
+    "TOKEN": [
+      {
+        "source": "onchain",
+        "detail": "Mint and freeze authority revoked; LP locked; no transfer tax",
+        "url": null,
+        "at": "2026-09-19T09:30:00Z",
+        "findings": ["MINT_AUTHORITY_REVOKED", "FREEZE_AUTHORITY_REVOKED", "LP_LOCKED", "NO_TRANSFER_TAX"]
+      }
+    ],
+    "ONCHAIN": [
+      {
+        "source": "onchain",
+        "detail": "Treasury follows published multisig schedule; no abnormal flows",
+        "url": null,
+        "at": "2026-09-19T09:40:00Z",
+        "findings": ["TREASURY_MATCHES_SCHEDULE", "NO_ABNORMAL_FLOWS"]
+      }
+    ],
+    "SOCIAL": [
+      {
+        "source": "social-analysis",
+        "detail": "Organic follower growth; low bot ratio; no paid-spike markers",
+        "url": "https://x.com/heliosmesh",
+        "at": "2026-09-19T09:50:00Z",
+        "findings": ["ORGANIC_GROWTH", "LOW_BOT_RATIO"]
+      }
+    ]
+  }
+}

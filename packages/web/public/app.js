@@ -337,10 +337,69 @@ async function route() {
     if (path === "/project/aurora") return await renderProject();
     if (path === "/distribution/aurora") return await renderDistribution();
     if (path === "/claim/maya") { await prefetchIds(); return await renderClaim(); }
+    if (path === "/early-humans") return await renderEarlyHumans();
     app.innerHTML = `<h1>Not found</h1><a class="link" href="/radar">← Radar</a>`;
   } catch (err) {
     app.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
   }
+}
+
+async function renderEarlyHumans() {
+  for (const el of steps.querySelectorAll("span")) el.className = "";
+  badge.hidden = true;
+  const { slogan, tags } = await api("/api/pilot/tags");
+  app.innerHTML = `
+    <section class="hero">
+      <div class="kicker" style="margin-top:0">ODP EARLY HUMANS V0</div>
+      <h1 class="mega rise">${esc(slogan).replace("Get discovered.", "<em>Get discovered.</em>")}</h1>
+      <p class="hero-sub rise" style="animation-delay:.12s">Opt in with a stub X handle, a Solana wallet, and 3–5 interests. Projects discover you through the existing matching engine — no hunting.</p>
+    </section>
+    <form class="intake panel rise" id="early-form" style="animation-delay:.2s">
+      <label>Connect X <span class="muted">(stub — placeholder handle, upgradable to OAuth)</span>
+        <input name="x_handle" required placeholder="@your_handle" autocomplete="off" />
+      </label>
+      <label class="check"><input type="checkbox" name="x_stub_acknowledged" required /> I understand this is a stub X connection, not OAuth, and can be upgraded later.</label>
+      <label>Connect Solana wallet
+        <input name="wallet" required placeholder="Solana pubkey" spellcheck="false" autocomplete="off" />
+      </label>
+      <div class="kicker" style="margin-top:8px">INTEREST TAGS — PICK 3 TO 5</div>
+      <div class="tag-grid">
+        ${tags.map((t) => `<label class="tag"><input type="checkbox" name="tag" value="${esc(t.slug)}" />${esc(t.label)}</label>`).join("")}
+      </div>
+      <label class="check"><input type="checkbox" name="consent" required /> I opt in to be discovered by ODP matching.</label>
+      <div class="center"><button class="cta" type="submit">Get discovered</button></div>
+      <p class="small-note center">Consent is required. Profiles persist as the frozen HumanProfile used by matching-engine.</p>
+      <div id="intake-status"></div>
+    </form>`;
+
+  document.getElementById("early-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const status = document.getElementById("intake-status");
+    const picked = [...form.querySelectorAll('input[name="tag"]:checked')].map((el) => el.value);
+    try {
+      const result = await api("/api/pilot/humans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          x_handle: form.x_handle.value,
+          wallet: form.wallet.value.trim(),
+          interest_tags: picked,
+          x_stub_acknowledged: form.x_stub_acknowledged.checked,
+          consent: form.consent.checked,
+        }),
+      });
+      status.innerHTML = `<div class="panel" style="margin-top:18px"><div class="strip-label">YOU'RE IN THE OPT-IN POOL</div>
+        <div class="kv" style="margin-top:12px">
+          <div class="k">Human</div><div class="mono">${esc(result.human_id)}</div>
+          <div class="k">X</div><div>${esc(result.x_id)} <span class="muted">(${esc(result.x_source)})</span></div>
+          <div class="k">Wallet</div><div class="mono">${esc(result.wallet)}</div>
+          <div class="k">Tags</div><div>${result.interest_tags.map(esc).join(" · ")}</div>
+        </div></div>`;
+    } catch (err) {
+      status.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
+    }
+  });
 }
 
 addEventListener("popstate", route);

@@ -11,8 +11,12 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build -w @odp/domain && npm run build -w @odp/passport-engine && npm run build -w @odp/matching-engine && npm run build -w @odp/distribution-engine && npm run build -w @odp/web",
-    "test": "npm run test --workspaces --if-present"
+    "build": "npm run build -w @odp/domain && npm run build -w @odp/passport-engine && npm run build -w @odp/matching-engine && npm run build -w @odp/distribution-engine && npm run build -w @odp/pilot && npm run build -w @odp/web",
+    "test": "npm run test --workspaces --if-present",
+    "pilot:intake-project": "npm run intake-project -w @odp/pilot --",
+    "pilot:intake-human": "npm run intake-human -w @odp/pilot --",
+    "pilot:run": "npm run run -w @odp/pilot --",
+    "pilot:smoke": "npm run smoke -w @odp/pilot"
   },
   "devDependencies": {
     "@types/node": "^26.6.1",

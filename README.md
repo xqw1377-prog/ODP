@@ -66,6 +66,11 @@ ODP/
 │       ├── public/         # index / app / style(纯展示,数据全部来自 API)
 │       ├── scripts/        # demo:prepare(fresh id → … → OPEN CLAIMS,止步 READY TO CLAIM)
 │       └── tests/          # demo-data 真实输出断言 + server smoke
+│   └── pilot/              # Pilot Enablement P0: project/human intake adapters + generic runner
+│       ├── src/            # brief→passport/intent, Early Humans V0, opt-in persist, generic match→merkle inputs
+│       ├── fixtures/       # Helios (non-Aurora) brief + synthetic opt-in humans
+│       ├── scripts/        # pilot:intake-project / intake-human / run / smoke
+│       └── tests/
 ├── programs/
 │   ├── merkle-vector/      # [P0-4] TS↔Rust 跨语言 test vector(零依赖 Rust,CI 强制)——MERKLE-WIRE-FORMAT = FROZEN-V1
 │   └── distributor/        # [P0-4] Anchor 程序:vault / root / claim / 防双领;§21 矩阵跑真实 SBF 产物
@@ -81,6 +86,8 @@ npm run dev            # 打开 http://127.0.0.1:3000/radar
 ```
 
 四场景:`/radar`(Discover)→ `/project/aurora`(Trust)→ `/distribution/aurora`(Match + Distribute)→ `/claim/maya`(现场点击 Claim on Solana,真实 Devnet 交易 + Receipt)。演示密钥仅存在于本地服务器的 `.odp/devnet-keys/`,永不进入浏览器。
+
+真实试点登机门(不改引擎、不绑死 Aurora)见 [docs/pilot-enablement-p0.md](docs/pilot-enablement-p0.md):`npm run pilot:smoke`,网页 `/early-humans`。
 
 ## P0 门禁状态
 

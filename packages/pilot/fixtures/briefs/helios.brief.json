@@ -1,0 +1,12 @@
+{
+  "project_id": "prj_helios_mesh",
+  "name": "Helios Mesh",
+  "symbol": "HELI",
+  "x": "@heliosmesh",
+  "website": "https://heliosmesh.example",
+  "github": "https://github.com/heliosmesh-example",
+  "wallet": "82X6oSEQta3iMxAAkxuYgXFGaaCHs6f6DDJbrKchF6fg",
+  "humans_needed": "We need Solana DePIN node operators and early adopters who will run the mesh.",
+  "discovered_at": "2026-09-19T08:00:00Z",
+  "evidence_bundle_path": "../evidence/helios.evidence.json"
+}

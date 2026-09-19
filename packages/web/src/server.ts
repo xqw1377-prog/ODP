@@ -4,6 +4,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeDemoSnapshot, mayaWhyYou, HUMAN_DISPLAY, loadDemoState } from "./demo-data.js";
 import { executeMayaClaim, readMayaClaimStatus } from "./claim.js";
+import {
+  EARLY_HUMAN_TAGS,
+  SLOGAN,
+  getPilotDataDir,
+  intakeHuman,
+  persistHumanIntake,
+  loadOptInHumans,
+  intakeProject,
+  persistProjectIntake,
+  openPassportEngine,
+  loadPersistedIntent,
+} from "@odp/pilot";
 
 /**
  * ODP demo server (P0-5). Serves the 4-scene UI and a small JSON API backed
@@ -13,7 +25,7 @@ import { executeMayaClaim, readMayaClaimStatus } from "./claim.js";
 
 const PORT = Number(process.env.ODP_PORT ?? 3000);
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../public");
-const ROUTES = new Set(["/radar", "/project/aurora", "/distribution/aurora", "/claim/maya"]);
+const ROUTES = new Set(["/radar", "/project/aurora", "/distribution/aurora", "/claim/maya", "/early-humans"]);
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -92,6 +104,61 @@ export function createDemoServer() {
           amount: state.maya_amount,
           distribution_id: state.distribution_id,
           ...status,
+        });
+      }
+
+      if (url === "/api/pilot/tags") {
+        return json(res, 200, { slogan: SLOGAN, tags: EARLY_HUMAN_TAGS });
+      }
+
+      if (url === "/api/pilot/humans" && req.method === "GET") {
+        const humans = loadOptInHumans(getPilotDataDir());
+        return json(res, 200, {
+          slogan: SLOGAN,
+          humans: humans.map((h) => ({
+            human_id: h.human_id,
+            x_id: h.x_id,
+            wallet: h.wallet,
+            interest_tags: h.interest_tags,
+          })),
+        });
+      }
+
+      if (url === "/api/pilot/humans" && req.method === "POST") {
+        const body = JSON.parse((await readBody(req)) || "{}");
+        const taken = intakeHuman(body);
+        persistHumanIntake(taken, getPilotDataDir());
+        return json(res, 200, {
+          slogan: SLOGAN,
+          human_id: taken.profile.human_id,
+          x_id: taken.profile.x_id,
+          wallet: taken.profile.wallet,
+          interest_tags: taken.profile.interest_tags,
+          x_source: taken.consent.x_source,
+        });
+      }
+
+      if (url === "/api/pilot/projects" && req.method === "POST") {
+        const body = JSON.parse((await readBody(req)) || "{}");
+        const taken = intakeProject(body);
+        persistProjectIntake(taken, getPilotDataDir());
+        return json(res, 200, {
+          project_id: taken.candidate.project_id,
+          name: taken.candidate.name,
+          passport_status: taken.passport.status,
+          reasons: taken.passport.reasons,
+          intent: taken.intent,
+        });
+      }
+
+      if (url.startsWith("/api/pilot/projects/") && req.method === "GET") {
+        const projectId = url.slice("/api/pilot/projects/".length);
+        const detail = openPassportEngine(getPilotDataDir()).getProjectPassport(projectId);
+        if (detail === null) return json(res, 404, { error: `no pilot project ${projectId}` });
+        return json(res, 200, {
+          candidate: detail.candidate,
+          passport: detail.passport,
+          intent: loadPersistedIntent(projectId, getPilotDataDir()),
         });
       }
 

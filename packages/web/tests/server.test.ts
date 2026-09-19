@@ -59,4 +59,18 @@ describe("demo server smoke", () => {
     const res = await fetch(`http://127.0.0.1:${p}/nope`);
     assert.equal(res.status, 404);
   });
+
+  it("serves Early Humans V0 boarding door without changing demo routes", async () => {
+    await listening;
+    const p = await port;
+    const res = await fetch(`http://127.0.0.1:${p}/early-humans`);
+    assert.equal(res.status, 200);
+    assert.ok((await res.text()).includes("Open Distribution Protocol"));
+    const tags = await (await fetch(`http://127.0.0.1:${p}/api/pilot/tags`)).json() as {
+      slogan: string;
+      tags: Array<{ slug: string }>;
+    };
+    assert.equal(tags.slogan, "Stop hunting. Get discovered.");
+    assert.equal(tags.tags.length, 10);
+  });
 });
