@@ -78,7 +78,8 @@
         document.getElementById("enroll-form").hidden = false;
         status.textContent = "wallet verified ✓ — complete the form";
       } catch (err) {
-        status.textContent = `error: ${err.message}`;
+        const msg = err && err.message ? err.message : String(err);
+        status.textContent = msg === PILOT.PHANTOM_MISSING ? msg : `error: ${msg}`;
       }
     });
 
