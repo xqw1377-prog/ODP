@@ -1,0 +1,10 @@
+programs/
+docs/screenshots/
+**/.odp/**
+.odp/
+.odp/devnet-keys/
+**/.odp/devnet-keys/**
+**/*.pem
+**/*secret*
+**/target/
+**/*.tsbuildinfo

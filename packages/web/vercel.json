@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "cd ../.. && npm run build",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api?odp_path=$1" }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "{public/**,../../packages/passport-engine/fixtures/**,../../packages/matching-engine/fixtures/**,../../packages/*/dist/**}",
+      "excludeFiles": "{**/.odp/**,**/.odp/devnet-keys/**,**/*devnet-keys*,**/*.pem}"
+    }
+  }
+}
