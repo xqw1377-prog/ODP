@@ -59,10 +59,13 @@
         .join("");
     });
 
-    PILOT.api("/api/pilot/state").then((s) => {
-      document.getElementById("pool-stats").textContent =
-        `${s.real_humans} real humans enrolled · ${s.eligible} eligible · ${s.runs.length} pilot runs`;
-    });
+    function refreshPoolStats() {
+      return PILOT.api("/api/pilot/state").then((s) => {
+        document.getElementById("pool-stats").textContent =
+          `${s.real_humans} real humans enrolled · ${s.eligible} eligible · ${s.runs.length} pilot runs`;
+      });
+    }
+    refreshPoolStats();
 
     document.getElementById("connect").addEventListener("click", async () => {
       const status = document.getElementById("status");
@@ -95,8 +98,10 @@
           consent_accepted: document.querySelector('input[name="consent"]').checked,
         });
         status.textContent = `enrolled ✓ human_id ${result.human_id} — status ${result.status}. Keep this id; you never re-register.`;
+        await refreshPoolStats();
       } catch (err) {
         status.textContent = `error: ${err.message}`;
+        if (/already enrolled/i.test(err.message)) await refreshPoolStats();
       }
     });
   </script>
