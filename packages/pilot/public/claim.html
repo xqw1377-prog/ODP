@@ -55,23 +55,33 @@
 
     document.getElementById("claim").addEventListener("click", async () => {
       const status = document.getElementById("status");
+      const btn = document.getElementById("claim");
+      if (btn.disabled) return;
+      btn.disabled = true;
+      const timers = [];
+      const say = (m) => { status.textContent = m; };
       try {
         if (typeof odpWeb3 === "undefined") throw new Error("wallet library still loading — refresh once more");
-        status.textContent = "requesting claim transaction from backend…";
+        say("requesting claim transaction from backend…");
         built = await PILOT.post("/api/pilot/claim/build", { run_id: runId, wallet: pubkey });
-        status.textContent = built.message + " — confirm in your wallet.";
+        say(built.message + " — confirm in your wallet.");
         const raw = Uint8Array.from(atob(built.transaction), (c) => c.charCodeAt(0));
         const tx = odpWeb3.Transaction.from(raw);
         // Phantom / Solflare: wallet injects its signature and submits to devnet
         const sent = await provider.signAndSendTransaction(tx);
         const signature = typeof sent === "string" ? sent : sent?.signature;
         if (!signature) throw new Error("wallet did not return a signature");
-        status.textContent = "waiting for devnet confirmation + receipt machine gate…";
+        say("submitted ✓ — waiting for devnet confirmation + receipt machine gate…");
+        timers.push(setTimeout(() => say("still waiting — devnet indexing can take up to ~40s. Keep this page open."), 9000));
+        timers.push(setTimeout(() => say("almost there — verifying your ClaimReceipt on-chain…"), 25000));
         const confirmed = await PILOT.post("/api/pilot/claim/confirm", {
           run_id: runId, wallet: pubkey, signature, receipt_pda: built.receipt_pda,
         });
-        status.innerHTML = `<span class="ok">Ownership delivered.</span> receipt ${PILOT.esc(confirmed.receipt_pda)} recorded in the evidence ledger.`;
+        timers.forEach(clearTimeout);
+        status.innerHTML = `<span class="ok" style="font-size:17px">Ownership delivered.</span><div class="panel" style="margin-top:12px; text-align:left"><div class="kicker">ON-CHAIN RECEIPT — KEEP THIS</div><div class="mono" style="font-size:14px; color:var(--text)">${PILOT.esc(confirmed.receipt_pda)}</div><div class="small-note">Recorded in the pilot evidence ledger. Claim tx: <span class="mono">${PILOT.esc(signature)}</span></div></div>`;
       } catch (err) {
+        timers.forEach(clearTimeout);
+        btn.disabled = false;
         status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
       }
     });

@@ -59,13 +59,23 @@
         .join("");
     });
 
-    PILOT.api("/api/pilot/state").then((s) => {
-      document.getElementById("pool-stats").textContent =
-        `${s.real_humans} real humans enrolled · ${s.eligible} eligible · ${s.runs.length} pilot runs`;
-    });
+    PILOT.api("/api/pilot/state").then(refreshPool);
+    // pool stats stay live on long-open tabs
+    setInterval(() => refreshPool(), 30000);
+
+    async function refreshPool() {
+      try {
+        const s = await PILOT.api("/api/pilot/state");
+        document.getElementById("pool-stats").textContent =
+          `${s.real_humans} real humans enrolled · ${s.eligible} eligible · ${s.runs.length} pilot runs`;
+      } catch {}
+    }
 
     document.getElementById("connect").addEventListener("click", async () => {
       const status = document.getElementById("status");
+      const btn = document.getElementById("connect");
+      if (btn.disabled) return;
+      btn.disabled = true;
       try {
         const { provider, pubkey } = await PILOT.connectWallet();
         walletPubkey = pubkey;
@@ -74,16 +84,20 @@
         status.textContent = "signing the one-time challenge in your wallet…";
         const signature = await PILOT.signMessage(provider, challenge.message);
         window._enrollment = { wallet: pubkey, nonce: challenge.nonce, signature };
-        document.getElementById("connect").hidden = true;
+        btn.hidden = true;
         document.getElementById("enroll-form").hidden = false;
         status.textContent = "wallet verified ✓ — complete the form";
       } catch (err) {
+        btn.disabled = false;
         status.textContent = `error: ${err.message}`;
       }
     });
 
     document.getElementById("submit").addEventListener("click", async () => {
       const status = document.getElementById("status");
+      const btn = document.getElementById("submit");
+      if (btn.disabled) return;
+      btn.disabled = true;
       try {
         const interests = [...document.querySelectorAll('input[name="tag"]:checked')].map((c) => c.value);
         const result = await PILOT.post("/api/pilot/humans", {
@@ -94,9 +108,20 @@
           interests,
           consent_accepted: document.querySelector('input[name="consent"]').checked,
         });
-        status.textContent = `enrolled ✓ human_id ${result.human_id} — status ${result.status}. Keep this id; you never re-register.`;
+        // success replaces the form — impossible to miss
+        document.getElementById("enroll-form").hidden = true;
+        status.innerHTML = `
+          <span class="ok" style="font-size:17px">Enrolled ✓ — you are ELIGIBLE.</span>
+          <div class="panel" style="margin-top:12px; text-align:left">
+            <div class="kicker">KEEP THIS ID — IT IS YOUR POOL IDENTITY</div>
+            <div class="mono" style="font-size:17px; color:var(--text)">${PILOT.esc(result.human_id)}</div>
+            <div class="small-note">When a pilot run goes live, the
+              <a class="link" href="/claim">Claim</a> page becomes available for your allocation.
+              You never need to enroll again.</div>
+          </div>`;
       } catch (err) {
-        status.textContent = `error: ${err.message}`;
+        btn.disabled = false;
+        status.innerHTML = `<div class="error-box">${PILOT.esc(err.message)}</div>`;
       }
     });
   </script>
