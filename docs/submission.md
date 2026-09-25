@@ -56,29 +56,33 @@ cross-language merkle vector). On-chain: Anchor 1.2 / Agave 4.2.2 Devnet.
 Full details: [docs/architecture.md](architecture.md),
 [README](../README.md).
 
-## Evidence in three tiers
+## Evidence in three levels
+
+**LEVEL 1 — DETERMINISTIC PROTOCOL**
+Passport / Matching / Distribution engines; full test suite green in CI; frozen invariants (derivation lock, identity binding, Merkle wire format).
+
+**LEVEL 2 — REAL SOLANA EXECUTION**
+Anchor distributor `GRgiEJUG…yFeW`; Devnet 15/15 attack matrix incl. rejection paths; real-browser E2E; ClaimReceipt double-claim rejection.
+
+**LEVEL 3 — REAL HUMAN EVIDENCE (PILOT-0)**
+own Phantom · wallet ownership proof (challenge signature) · ELIGIBLE · real allocation (1,000) · self-custody claim · on-chain receipt.
+Claim tx: [explorer `i2GHXp4y…`](https://explorer.solana.com/tx/i2GHXp4yDwnru4cjmyWaXu2PT1uM5v3EPtFi8X5TmdkYDTnLoMPEmABURN9xobonszt1m94U4nNZK8jiiApFQwD?cluster=devnet) · ClaimReceipt: [explorer `3J1onUTn…`](https://explorer.solana.com/account/3J1onUTnG5RBp6o5b1nCtdD4kVLWVnQXReQQVdtnCuLj?cluster=devnet) · Verdict: [PILOT0_VERDICT](PILOT0_VERDICT.md) · Ledger: [pilot-evidence-…](pilot-evidence-run_odp_pilot_one_20260919150045.md)
+
+## Unified facts (all submission documents share this block)
 
 ```text
-1. Fixture + deterministic engines   → full test suite, CI green
-2. Real Devnet program + 15/15 attack matrix (incl. rejection paths)
-3. First real-human self-custody claim (PILOT-0) — own Phantom, on-chain receipt
+P0 HACKATHON BASELINE      = 90d7ef0
+PILOT-0 EVIDENCE ARCHIVE   = 64942ea
+CURRENT SUBMISSION MAIN    = c26b401
+REAL HUMAN                 = YES
+REAL HUMAN TRACTION        = NOT YET
+FIRST-PARTY PILOT          = YES
+EXTERNAL PROJECT ADOPTION  = NOT YET
+SOLANA DEVNET              = YES
+PRODUCTION                 = NO
 ```
 
-Live proof pointers (tier 3):
-- Enrollment: wallet-ownership challenge signature verified server-side; human `hum_72oaf8ltwz89` = ELIGIBLE
-- Claim tx: [explorer `i2GHXp4y…`](https://explorer.solana.com/tx/i2GHXp4yDwnru4cjmyWaXu2PT1uM5v3EPtFi8X5TmdkYDTnLoMPEmABURN9xobonszt1m94U4nNZK8jiiApFQwD?cluster=devnet) (finalized, err null)
-- ClaimReceipt PDA: [`3J1onUTn…`](https://explorer.solana.com/account/3J1onUTnG5RBp6o5b1nCtdD4kVLWVnQXReQQVdtnCuLj?cluster=devnet) (owner = ODP distributor program)
-- Human token balance after claim: 1000 (on-chain ATA)
-
-## Honest limits
-
-```text
-REAL HUMAN              = YES (founder-operated first run)
-EXTERNAL USER TRACTION  = NOT YET
-FIRST-PARTY PILOT       = YES
-EXTERNAL PROJECT ADOPT. = NOT YET
-NETWORK                 = DEVNET ONLY (production = NO)
-```
+(Boundary facts live in the **Unified facts** block above — stated once, never drifted.)
 
 ## Live proof pointers
 

@@ -39,6 +39,6 @@ not production
 Full aggregate ledger: [pilot-evidence-run_odp_pilot_one_20260919150045.md](pilot-evidence-run_odp_pilot_one_20260919150045.md)
 
 Code baselines:
-- PILOT-0 archived evidence baseline: `pilot/real-evidence-v0` @ `64942eab…` (closeout containing the executed claim-page code)
+- PILOT-0 evidence-producing code baseline: `pilot/real-evidence-v0` @ `64942eab…`
+- current submission main: `c26b401…` (includes the machine-gate confirmation-polling fix)
 - executed machine gate + claim: tx `i2GHXp4y…` finalized on devnet
-- current submission main: `9919df70…` + SUBMIT-P0-1 fix (`c26b401`)

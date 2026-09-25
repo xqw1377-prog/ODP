@@ -23,11 +23,28 @@
 
 当前阶段:**黑客松提交收口(SUBMISSION CLOSEOUT)**。证据分三级,逐级递进:
 
-1. **Fixture + 确定性引擎** —— 全仓测试 CI 绿(以最终 freeze 的 CI 日志为准)
-2. **真实 Devnet 程序 + 15/15 攻击矩阵** —— 含拒绝路径的链上证据
-3. **第一个真人自托管 Claim** —— PILOT-0 = PASS-E2E / REAL-HUMAN / DEVNET,见 [docs/PILOT0_VERDICT.md](docs/PILOT0_VERDICT.md)
+**LEVEL 1 — DETERMINISTIC PROTOCOL**
+Passport / Matching / Distribution engines · 全仓测试 CI 绿 · 冻结不变量(derivation lock、identity binding、Merkle wire format)
 
-边界如实:REAL HUMAN = YES / EXTERNAL USER TRACTION = NOT YET;FIRST-PARTY PILOT = YES / EXTERNAL ADOPTION = NOT YET;DEVNET = YES / PRODUCTION = NO。
+**LEVEL 2 — REAL SOLANA EXECUTION**
+Anchor distributor · Devnet 15/15 攻击矩阵 · browser E2E · ClaimReceipt
+
+**LEVEL 3 — REAL HUMAN EVIDENCE**
+own Phantom · wallet ownership proof · ELIGIBLE · real allocation · self-custody claim · on-chain receipt —— 见 [docs/PILOT0_VERDICT.md](docs/PILOT0_VERDICT.md)
+
+统一事实(全部文档同口径):
+
+```text
+P0 HACKATHON BASELINE      = 90d7ef0
+PILOT-0 EVIDENCE ARCHIVE   = 64942ea
+CURRENT SUBMISSION MAIN    = c26b401
+REAL HUMAN                 = YES
+REAL HUMAN TRACTION        = NOT YET
+FIRST-PARTY PILOT          = YES
+EXTERNAL PROJECT ADOPTION  = NOT YET
+SOLANA DEVNET              = YES
+PRODUCTION                 = NO
+```
 
 ## Quickstart
 
