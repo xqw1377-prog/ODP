@@ -43,13 +43,16 @@ function resolvePublicDir(): string {
   return path.resolve(candidates[0]!);
 }
 
-/** Recover the public path when Vercel rewrites `/(.*)` → `/api?odp_path=$1`. */
+/** Recover the public path when Vercel rewrites `/(.*)` → `/api?odp_path=$1`.
+    The root rewrite carries an EMPTY odp_path — "" must resolve to "/", not
+    fall through to the literal /api function path (SUBMIT-P0-1). */
 export function requestPath(req: IncomingMessage): string {
   const raw = req.url ?? "/";
   try {
     const u = new URL(raw, "http://odp.local");
     const rewritten = u.searchParams.get("odp_path");
-    if (rewritten !== null && rewritten.length > 0) {
+    if (rewritten !== null) {
+      if (rewritten.length === 0) return "/";
       return rewritten.startsWith("/") ? rewritten : `/${rewritten}`;
     }
     return u.pathname;
