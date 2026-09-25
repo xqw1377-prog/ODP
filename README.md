@@ -2,7 +2,7 @@
 
 **Discover → Trust → Match → Distribute — Good projects find the right people.**
 
-> **Token finds the human.** 黑客松 Golden Path 已全线闭合(G0–G5 PASS):真实浏览器 × 真实 Solana Devnet。
+> **Token finds the human.** 黑客松 Golden Path 全线闭合(G0–G5 PASS);PILOT-0 完成 ODP 历史上第一次**真人自托管 Claim**(真实 Phantom 签名,Solana Devnet 链上收据在档)。
 
 ## Hackathon 提交包
 
@@ -13,13 +13,21 @@
 | 现场演示稳定运行手册 | [docs/demo-runbook.md](docs/demo-runbook.md) |
 | 浏览器点击 E2E 证据(最后一环) | [docs/browser-e2e-evidence-dst_aurora_demo_20260918150700.md](docs/browser-e2e-evidence-dst_aurora_demo_20260918150700.md) |
 | Devnet 攻击矩阵证据(003) | [docs/devnet-evidence-dst_aurora_devnet_003.md](docs/devnet-evidence-dst_aurora_devnet_003.md) |
+| **PILOT-0 裁决书(第一个真人 Claim)** | [docs/PILOT0_VERDICT.md](docs/PILOT0_VERDICT.md) |
+| **PILOT-0 聚合证据账本** | [docs/pilot-evidence-run_odp_pilot_one_20260919150045.md](docs/pilot-evidence-run_odp_pilot_one_20260919150045.md) |
 | 页面截图 | [docs/screenshots/](docs/screenshots) |
 
 - 白皮书:[docs/whitepaper-v0.1.md](docs/whitepaper-v0.1.md)
 - P0 开工令:[docs/p0-kickoff.md](docs/p0-kickoff.md)
 - 架构说明:[docs/architecture.md](docs/architecture.md)
 
-当前阶段:**P0 冻结(G0–G5 全 PASS),进入提交材料与现场演示。**
+当前阶段:**黑客松提交收口(SUBMISSION CLOSEOUT)**。证据分三级,逐级递进:
+
+1. **Fixture + 确定性引擎** —— 全仓测试 CI 绿(以最终 freeze 的 CI 日志为准)
+2. **真实 Devnet 程序 + 15/15 攻击矩阵** —— 含拒绝路径的链上证据
+3. **第一个真人自托管 Claim** —— PILOT-0 = PASS-E2E / REAL-HUMAN / DEVNET,见 [docs/PILOT0_VERDICT.md](docs/PILOT0_VERDICT.md)
+
+边界如实:REAL HUMAN = YES / EXTERNAL USER TRACTION = NOT YET;FIRST-PARTY PILOT = YES / EXTERNAL ADOPTION = NOT YET;DEVNET = YES / PRODUCTION = NO。
 
 ## Quickstart
 

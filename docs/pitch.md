@@ -127,6 +127,9 @@ Final slide / final words:
   live example.
 - **Is the demo real?** Yes — Devnet program GRgi…yFeW, real browser click,
   real tx (see evidence docs), reproducible via `npm run demo:prepare && npm run dev`.
+  And it didn't stop at the demo: PILOT-0 completed the first real-human
+  self-custody claim — a human enrolled via a wallet-ownership challenge and
+  claimed their allocation with their own Phantom ([PILOT0_VERDICT](PILOT0_VERDICT.md)).
 - **What's frozen vs future?** P0 froze the golden path (whitepaper-aligned);
   no protocol token, no DAO, no ads. Growth = more discovery sources, richer
   evidence, more chains.

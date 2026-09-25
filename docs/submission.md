@@ -22,11 +22,12 @@ Distribute, ending with a real browser claim confirmed on-chain.
 
 | Layer | What it is | Evidence |
 |---|---|---|
-| Domain contract | 7 frozen schemas; status derived from evidence (derivation lock); strict identity binding; u64-safe amounts | 163 tests, CI-enforced TS↔Rust merkle vector |
+| Domain contract | 7 frozen schemas; status derived from evidence (derivation lock); strict identity binding; u64-safe amounts | full test suite green in CI; CI-enforced TS↔Rust merkle vector |
 | Passport engine | Discovery → evidence assembly → six-dim passport → validated persistence (atomic writes, read-side tamper rejection) → radar/detail read models | `packages/passport-engine` |
 | Matching engine | ALLOW hard gate; deterministic 4-factor score (interest fit 55 / human confidence 20 / reputation 15 / network 10); risk flags hard-block at 0; explainable reasons | `packages/matching-engine` |
 | Solana distributor | Anchor program `GRgiEJUGZxYzoQp7jJSvt4hZvv1AvojoC7Fgz2HyyFeW`: PDA vault, one-shot immutable root commit, on-chain merkle verify incl. base58 leaf recompute, ClaimReceipt PDA double-claim rejection, conservation, NO admin sweep | [devnet evidence](devnet-evidence-dst_aurora_devnet_003.md): 15/15 matrix incl. rejections |
 | Demo layer | 4-scene web app over the real pipelines; demo-wallet claim signing server-side | [browser E2E evidence](browser-e2e-evidence-dst_aurora_demo_20260918150700.md): real Chrome click → fresh devnet tx `23Wh2oTs…` → Maya balance 5000 |
+| **Pilot layer (P1)** | Non-custodial Early-Humans pipeline: one-time wallet-ownership challenge (server never holds human keys), consent + interests → ELIGIBLE; operator-verified evidence → derived passport; generic pilot runner; self-custody claim flow; aggregate-only evidence export | **PILOT-0 = PASS-E2E / REAL-HUMAN / DEVNET** — first real-human self-custody claim: [PILOT0_VERDICT](PILOT0_VERDICT.md) · claim tx [explorer `i2GHXp4y…`](https://explorer.solana.com/tx/i2GHXp4yDwnru4cjmyWaXu2PT1uM5v3EPtFi8X5TmdkYDTnLoMPEmABURN9xobonszt1m94U4nNZK8jiiApFQwD?cluster=devnet) · ClaimReceipt [explorer `3J1onUTn…`](https://explorer.solana.com/account/3J1onUTnG5RBp6o5b1nCtdD4kVLWVnQXReQQVdtnCuLj?cluster=devnet) · aggregate ledger [pilot-evidence-…](pilot-evidence-run_odp_pilot_one_20260919150045.md) |
 
 ## The three invariants (product principles, enforced in code)
 
@@ -50,10 +51,34 @@ Distribute (equal-split policy → merkle tree → Anchor program: vault →
             immutable root → LIVE → proof-verified claims → receipts)
 ```
 
-Off-chain: TypeScript (5 workspace packages, 163 tests, CI green incl.
+Off-chain: TypeScript (6 workspace packages, full test suite green in CI incl.
 cross-language merkle vector). On-chain: Anchor 1.2 / Agave 4.2.2 Devnet.
 Full details: [docs/architecture.md](architecture.md),
 [README](../README.md).
+
+## Evidence in three tiers
+
+```text
+1. Fixture + deterministic engines   → full test suite, CI green
+2. Real Devnet program + 15/15 attack matrix (incl. rejection paths)
+3. First real-human self-custody claim (PILOT-0) — own Phantom, on-chain receipt
+```
+
+Live proof pointers (tier 3):
+- Enrollment: wallet-ownership challenge signature verified server-side; human `hum_72oaf8ltwz89` = ELIGIBLE
+- Claim tx: [explorer `i2GHXp4y…`](https://explorer.solana.com/tx/i2GHXp4yDwnru4cjmyWaXu2PT1uM5v3EPtFi8X5TmdkYDTnLoMPEmABURN9xobonszt1m94U4nNZK8jiiApFQwD?cluster=devnet) (finalized, err null)
+- ClaimReceipt PDA: [`3J1onUTn…`](https://explorer.solana.com/account/3J1onUTnG5RBp6o5b1nCtdD4kVLWVnQXReQQVdtnCuLj?cluster=devnet) (owner = ODP distributor program)
+- Human token balance after claim: 1000 (on-chain ATA)
+
+## Honest limits
+
+```text
+REAL HUMAN              = YES (founder-operated first run)
+EXTERNAL USER TRACTION  = NOT YET
+FIRST-PARTY PILOT       = YES
+EXTERNAL PROJECT ADOPT. = NOT YET
+NETWORK                 = DEVNET ONLY (production = NO)
+```
 
 ## Live proof pointers
 
@@ -69,11 +94,27 @@ Full details: [docs/architecture.md](architecture.md),
 ## Run it yourself
 
 ```bash
-npm install && npm run build && npm test   # 163/163
+npm install && npm run build && npm test   # full suite green (see CI badge)
 cd packages/web
 npm run demo:prepare    # fresh devnet distribution → READY TO CLAIM
 npm run dev             # http://127.0.0.1:3000/radar
 ```
+
+## Videos
+
+- Pitch (2–3 min): _link pending upload_
+- Technical demo (≤3 min): _link pending upload_ — script: [docs/TECH_DEMO_SCRIPT.md](TECH_DEMO_SCRIPT.md)
+
+## Demand validation & GTM
+
+- Outreach to DePIN projects (NATIX, Hivemapper) has started. NATIX returned
+  a real human reply ("escalated to the designated team for review") —
+  honestly scored: REAL REPLY = YES / PILOT INTERESTED = NO / PILOT AGREED = NO.
+- Distribution plan: Early-Humans waitlist → invite to verified enrollment
+  (wallet-challenge) → first pilot run allocations → feedback loop into
+  evidence ledger. First gate: 10 real humans → 30 → 200.
+- Live entry points: [https://odp.mealkey.cn](https://odp.mealkey.cn) (front
+  door) · public pilot backend API (canonical @odp/pilot).
 
 ## What's next (post-hackathon)
 
