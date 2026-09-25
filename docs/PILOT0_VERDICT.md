@@ -40,5 +40,5 @@ Full aggregate ledger: [pilot-evidence-run_odp_pilot_one_20260919150045.md](pilo
 
 Code baselines:
 - PILOT-0 evidence-producing code baseline: `pilot/real-evidence-v0` @ `64942eab…`
-- current submission main: `c26b401…` (includes the machine-gate confirmation-polling fix)
+- SUBMISSION CODE BASELINE: `c26b401…` (last code baseline before Submission Closeout; contains the machine-gate confirmation-polling fix)
 - executed machine gate + claim: tx `i2GHXp4y…` finalized on devnet

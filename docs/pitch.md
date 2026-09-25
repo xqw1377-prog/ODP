@@ -53,8 +53,8 @@ Point at the judgment:
 
 Point at Maya:
 
-> Maya — 0.942. Why? Solana, DePIN, early adopter, hardware. Real behavior,
-> real confidence. Dan — 0.491, relevant, a developer.
+> Maya — 0.942. Why? Solana, DePIN, early adopter, hardware. Relevant behavior
+> signals and confidence. Dan — 0.491, relevant, a developer.
 > And Sib — BLOCKED. Sybil cluster. No score can outbid risk.
 
 Point at the allocation line:
@@ -132,4 +132,4 @@ Final slide / final words:
   claimed their allocation with their own Phantom ([PILOT0_VERDICT](PILOT0_VERDICT.md)).
 - **What's frozen vs future?** P0 froze the golden path (whitepaper-aligned);
   no protocol token, no DAO, no ads. Growth = more discovery sources, richer
-  evidence, more chains.
+  evidence, more real projects and humans on Solana.

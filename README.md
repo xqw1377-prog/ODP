@@ -32,12 +32,15 @@ Anchor distributor · Devnet 15/15 攻击矩阵 · browser E2E · ClaimReceipt
 **LEVEL 3 — REAL HUMAN EVIDENCE**
 own Phantom · wallet ownership proof · ELIGIBLE · real allocation · self-custody claim · on-chain receipt —— 见 [docs/PILOT0_VERDICT.md](docs/PILOT0_VERDICT.md)
 
-统一事实(全部文档同口径):
+## Canonical submission facts
+
+(Single source of truth, shared by README / submission / PILOT0_VERDICT.
+The pitch is a speech — it carries none of these SHAs.)
 
 ```text
 P0 HACKATHON BASELINE      = 90d7ef0
-PILOT-0 EVIDENCE ARCHIVE   = 64942ea
-CURRENT SUBMISSION MAIN    = c26b401
+PILOT-0 EVIDENCE BASELINE  = 64942ea
+SUBMISSION CODE BASELINE   = c26b401 (last code baseline before Submission Closeout; contains SUBMIT-P0-1 root fix)
 REAL HUMAN                 = YES
 REAL HUMAN TRACTION        = NOT YET
 FIRST-PARTY PILOT          = YES
@@ -86,11 +89,17 @@ ODP/
 │       ├── fixtures/       # keys/(devnet pubkey 清单,无私钥)
 │       ├── scripts/        # gen-demo-keys / gen-merkle-vector / localnet-e2e(可指向 devnet)
 │       └── tests/
-│   └── web/                # [P0-5] 黑客松演示层:4 场景 UI + Demo Wallet 认领服务器(私钥只在本地服务器)
+│   ├── web/                # [P0-5] 黑客松演示层:4 场景 UI + Demo Wallet 认领服务器(私钥只在本地服务器)
 │       ├── src/            # demo-data(真实 pipeline 桥接)/ claim(演示钱包签名)/ server
 │       ├── public/         # index / app / style(纯展示,数据全部来自 API)
 │       ├── scripts/        # demo:prepare(fresh id → … → OPEN CLAIMS,止步 READY TO CLAIM)
 │       └── tests/          # demo-data 真实输出断言 + server smoke
+│   ├── pilot/              # [P1] Early Humans:非托管报名(challenge 验签)/ 通用 Pilot Runner / 自托管 Claim / 证据账本(PILOT-0)
+│       ├── src/            # challenge / intake-human / intake-project / verify-claims / runner / claim-tx / server
+│       ├── public/         # 报名 / 项目 / 控制台 / Claim 页面(+ vendor web3 bundle)
+│       ├── scripts/        # pilot:prepare / pilot:evidence / pilot:fixture-humans
+│       └── tests/          # 验签与防重放、D5-R、runner、claim-tx 守卫、server 测试
+├── deploy/                 # [DEPLOY-1] systemd / Caddyfile / install / backup / smoke(VPS 单机)
 ├── programs/
 │   ├── merkle-vector/      # [P0-4] TS↔Rust 跨语言 test vector(零依赖 Rust,CI 强制)——MERKLE-WIRE-FORMAT = FROZEN-V1
 │   └── distributor/        # [P0-4] Anchor 程序:vault / root / claim / 防双领;§21 矩阵跑真实 SBF 产物

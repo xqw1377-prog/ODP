@@ -68,12 +68,14 @@ Anchor distributor `GRgiEJUG…yFeW`; Devnet 15/15 attack matrix incl. rejection
 own Phantom · wallet ownership proof (challenge signature) · ELIGIBLE · real allocation (1,000) · self-custody claim · on-chain receipt.
 Claim tx: [explorer `i2GHXp4y…`](https://explorer.solana.com/tx/i2GHXp4yDwnru4cjmyWaXu2PT1uM5v3EPtFi8X5TmdkYDTnLoMPEmABURN9xobonszt1m94U4nNZK8jiiApFQwD?cluster=devnet) · ClaimReceipt: [explorer `3J1onUTn…`](https://explorer.solana.com/account/3J1onUTnG5RBp6o5b1nCtdD4kVLWVnQXReQQVdtnCuLj?cluster=devnet) · Verdict: [PILOT0_VERDICT](PILOT0_VERDICT.md) · Ledger: [pilot-evidence-…](pilot-evidence-run_odp_pilot_one_20260919150045.md)
 
-## Unified facts (all submission documents share this block)
+## Canonical submission facts
+
+(Single source of truth, shared by README / submission / PILOT0_VERDICT.)
 
 ```text
 P0 HACKATHON BASELINE      = 90d7ef0
-PILOT-0 EVIDENCE ARCHIVE   = 64942ea
-CURRENT SUBMISSION MAIN    = c26b401
+PILOT-0 EVIDENCE BASELINE  = 64942ea
+SUBMISSION CODE BASELINE   = c26b401 (last code baseline before Submission Closeout; contains SUBMIT-P0-1 root fix)
 REAL HUMAN                 = YES
 REAL HUMAN TRACTION        = NOT YET
 FIRST-PARTY PILOT          = YES
