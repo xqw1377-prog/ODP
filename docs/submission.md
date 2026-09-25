@@ -119,8 +119,9 @@ npm run dev             # http://127.0.0.1:3000/radar
 - Distribution plan: Early-Humans waitlist → invite to verified enrollment
   (wallet-challenge) → first pilot run allocations → feedback loop into
   evidence ledger. First gate: 10 real humans → 30 → 200.
-- Live entry points: [https://odp.mealkey.cn](https://odp.mealkey.cn) (front
-  door) · public pilot backend API (canonical @odp/pilot).
+- Live entry point: [https://odp.mealkey.cn](https://odp.mealkey.cn) — the canonical
+  @odp/pilot backend (Early Humans enrollment · wallet challenge · claim · operator API).
+  Demo videos recorded against the local/devnet deployment (see demo-runbook).
 
 ## What's next (post-hackathon)
 
