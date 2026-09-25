@@ -108,14 +108,13 @@ npm run dev             # http://127.0.0.1:3000/radar
 
 ## Videos
 
-- Pitch (2–3 min): _link pending upload_
-- Technical demo (≤3 min): _link pending upload_ — script: [docs/TECH_DEMO_SCRIPT.md](TECH_DEMO_SCRIPT.md)
+- Pitch (2–3 min): _link pending upload_ — final script: [docs/video/P0-3A-PRESENTATION-SCRIPT.md](video/P0-3A-PRESENTATION-SCRIPT.md)
+- Technical demo (≤3 min): _link pending upload_ — script: [docs/TECH_DEMO_SCRIPT.md](TECH_DEMO_SCRIPT.md); final script: [docs/video/P0-3B-TECH-DEMO-SCRIPT.md](video/P0-3B-TECH-DEMO-SCRIPT.md)
 
 ## Demand validation & GTM
 
-- Outreach to DePIN projects (NATIX, Hivemapper) has started. NATIX returned
-  a real human reply ("escalated to the designated team for review") —
-  honestly scored: REAL REPLY = YES / PILOT INTERESTED = NO / PILOT AGREED = NO.
+- Outreach to DePIN projects (NATIX, Hivemapper) has started. NATIX acknowledged our proposal and escalated it to their team for review. No project has committed to a pilot yet.
+- NATIX support acknowledged the proposal and escalated it internally. PROJECT-TEAM REPLY = NOT YET / PILOT INTEREST = NOT YET / PILOT AGREED = NO / ADOPTION = NOT YET.
 - Distribution plan: Early-Humans waitlist → invite to verified enrollment
   (wallet-challenge) → first pilot run allocations → feedback loop into
   evidence ledger. First gate: 10 real humans → 30 → 200.
