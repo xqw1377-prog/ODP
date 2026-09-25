@@ -108,6 +108,7 @@ describe("Vercel Front Door rewrite", () => {
     assert.equal(requestPath({ url: "/api?odp_path=early-humans" } as never), "/early-humans");
     assert.equal(requestPath({ url: "/api?odp_path=api/pilot/humans" } as never), "/api/pilot/humans");
     assert.equal(requestPath({ url: "/api/pilot/humans" } as never), "/api/pilot/humans");
+    assert.equal(requestPath({ url: "/api?odp_path=" } as never), "/"); // SUBMIT-P0-1: root rewrite carries an EMPTY odp_path
     assert.equal(typeof handleDemoRequest, "function");
   });
 });
