@@ -5,7 +5,7 @@ Every claim on screen is backed by a live artifact.
 
 | Time | On screen | Say (beat) |
 | --- | --- | --- |
-| 0:00–0:15 | repo + `npm run build && npm test` output | "TypeScript monorepo, five frozen engines, full suite green in CI — and a Rust cross-check on the Merkle wire format." |
+| 0:00–0:15 | repo + `npm run build && npm test` output | "TypeScript monorepo with frozen domain, Passport, Matching and Distribution contracts, full suite green in CI, plus a Rust cross-check on the Merkle wire format." |
 | 0:15–0:40 | `/radar` (frozen P0 evidence set → real protocol engine output) | "Discover: three projects on the radar. Verdicts are DERIVED from evidence — derivation-locked: a passport that disagrees with its evidence cannot even parse." |
 | 0:40–1:05 | `/project/aurora` | "Trust: six evidence dimensions assemble the passport. The ruling ALLOW is computed, never declared — and the derivation lock proves it." |
 | 1:05–1:35 | `/distribution/aurora` | "Match: only ALLOW projects enter. Interest fit 55%, human confidence 20%, reputation 15%, network 10%. Sib is BLOCKED — risk flags hard-block at zero. And watch: match score is NOT token entitlement — Maya scores 0.942 and Dan 0.491, but each receives 5,000. Matching decides eligibility; allocation follows protocol policy." |
