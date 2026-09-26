@@ -2,6 +2,7 @@
 
 **STATUS: ACTIVE** · Applies to: every agent or human writing ODP materials
 (pitch, submission, README, docs, videos, chat drafts, outreach copy).
+**Enforcement mode: process/manual. No automated CI enforcement exists yet.**
 **Enforcement: CONFLICT WITH THIS GATE → STOP → DO NOT POLISH THE COPY →
 DO NOT COMMIT → REPORT THE CONFLICT FIRST.**
 
@@ -9,10 +10,12 @@ DO NOT COMMIT → REPORT THE CONFLICT FIRST.**
 
 Agent-produced ODP documents have repeatedly contained fabricated facts —
 "368 real participants (2026-09-22)", "NATIX responded positively",
-"Enroll is a 0-SOL transaction", "Issue #8 fixed today". None of these exist
-in any store, test, or commit. Every one of them would have entered the
-Colosseum submission and become a credibility loss under judge questioning.
-This gate is the entry contract: **facts first, copy second.**
+"Enroll is a 0-SOL transaction", "Issue #8 fixed today". None of these claims
+were true of the canonical submission main/evidence state. The Issue #8 fix
+exists only on the deferred pilot branch @ `58e3101` and is not in main.
+Every one of them would have entered the Colosseum submission and become a
+credibility loss under judge questioning. This gate is the entry contract:
+**facts first, copy second.**
 
 ## GATE A — CANONICAL FACTS
 
@@ -30,8 +33,10 @@ PRODUCTION                 = NO
 
 ## GATE B — CAPABILITY TRUTH
 
-What the system actually does today. If your material implies anything beyond
-these lines, it is fiction.
+What the system actually does today. If material implies anything beyond
+these lines, it is **UNSUPPORTED** until evidence is recorded and the gate is
+updated — unsupported ≠ fiction: new facts enter by passing RULE 1, not by
+being declared.
 
 ```text
 HUMAN ENROLLMENT
@@ -92,7 +97,13 @@ material must carry all three:
 ```text
 source        = where it was observed (store / explorer tx / signed doc / email)
 observed_at   = date of observation
-evidence level= ON-CHAIN | SIGNED RECORD | WRITTEN REPLY | VERBAL | HYPOTHESIS
+evidence level= ON-CHAIN | RUNTIME | REPO/CI | SIGNED RECORD | WRITTEN REPLY | PUBLIC SOURCE | VERBAL | HYPOTHESIS
+```
+
+```text
+RUNTIME        = observed from the live service/API (e.g. /api/pilot/state)
+REPO/CI        = repository state or CI run (commit SHA, test result, workflow)
+PUBLIC SOURCE  = publicly reachable page/post (explorer, official blog, X post)
 ```
 
 If any of the three is missing, the claim is labeled and used only as:
